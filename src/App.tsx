@@ -50,6 +50,13 @@ export default function App() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Prioritize environment key; if present, we are authorized.
+      const envKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+      if (envKey) {
+        setHasAuth(true);
+        return;
+      }
+      
       const hasKey = await (window as any).aistudio?.hasSelectedApiKey();
       setHasAuth(!!hasKey);
     };
@@ -75,19 +82,26 @@ export default function App() {
     setStreamingText("");
 
     try {
+      // Create a fresh instance right before the call to catch the latest key
       let apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
       
       if (!apiKey) {
         const hasKey = await (window as any).aistudio?.hasSelectedApiKey();
         if (!hasKey) {
           await (window as any).aistudio?.openSelectKey();
+          // Assume success after opening the dialog to avoid race conditions
+          setHasAuth(true);
           apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
         }
       }
 
-      if (!apiKey) throw new Error("MISSING_API_KEY");
+      // Final fallback check
+      if (!apiKey) {
+        // If still no key, we try to proceed anyway as the platform might inject it late
+        apiKey = (window as any).process?.env?.GEMINI_API_KEY || (window as any).process?.env?.API_KEY;
+      }
 
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: apiKey || "" });
       const responseStream = await ai.models.generateContentStream({
         model: "gemini-3-flash-preview",
         contents: userMsg,
