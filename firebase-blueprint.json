@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Stores user profile information and roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "photoURL": { "type": "string", "format": "uri", "description": "The user's profile picture URL." },
+        "role": { "type": "string", "enum": ["admin", "architect", "guest"], "description": "The user's role in the system." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "Stores a chat session between the Architect and Azrael.",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string", "description": "Unique session ID." },
+        "userId": { "type": "string", "description": "The ID of the user who owns the session." },
+        "messages": { 
+          "type": "array", 
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "azrael"] },
+              "text": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sessionId", "userId", "messages", "updatedAt"]
+    },
+    "SystemLog": {
+      "title": "SystemLog",
+      "description": "Stores system logs and security breaches.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["log", "breach"] },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["type", "message", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "User chat sessions."
+    },
+    "/system/logs/entries/{logId}": {
+      "schema": "SystemLog",
+      "description": "System-wide logs."
+    }
+  }
+}
