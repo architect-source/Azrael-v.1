@@ -3,14 +3,15 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": {
+    "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "postinstall": "npm run build"
   },
-      "dependencies": {
+    "dependencies": {
     "firebase": "^10.10.0",
     "@google/generative-ai": "^0.1.0",
     "lucide-react": "^0.344.0",
