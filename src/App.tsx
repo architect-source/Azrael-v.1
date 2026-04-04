@@ -1,12 +1,7 @@
 /**
  * @license
- * Copyright (C) 2026 Azrael-Core.
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, version 3.
- * * PROPRIETARY OR COMMERCIAL USE REQUIRES A SEPARATE LICENSE FROM THE ARCHITECT.
+ * SPDX-License-Identifier: Apache-2.0
  */
-
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
