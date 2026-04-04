@@ -3,13 +3,13 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB-AsBSiJTI5y440JI...", // Use your real key from the screenshot
-  authDomain: "azrael-core-sentry.firebaseapp.com",
-  projectId: "azrael-core-sentry",
-  storageBucket: "azrael-core-sentry.appspot.com",
-  messagingSenderId: "233456537122",
-  appId: "1:233456537122:web:18b33...",
-  measurementId: "G-MW22BZ6YD5"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
