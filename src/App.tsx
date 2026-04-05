@@ -49,18 +49,6 @@ export default function App() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      // Prioritize environment key; if present, we are authorized.
-      const envKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-      if (envKey) {
-        setHasAuth(true);
-        return;
-      }
-      
-      const hasKey = await (window as any).aistudio?.hasSelectedApiKey();
-      setHasAuth(!!hasKey);
-    };
-    checkAuth();
     const timer = setTimeout(() => setBooted(true), 1500);
     return () => clearTimeout(timer);
   }, []);
@@ -82,26 +70,10 @@ export default function App() {
     setStreamingText("");
 
     try {
-      // Create a fresh instance right before the call to catch the latest key
-      let apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+      // Direct access to the environment key. No more dialogs.
+      const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
       
-      if (!apiKey) {
-        const hasKey = await (window as any).aistudio?.hasSelectedApiKey();
-        if (!hasKey) {
-          await (window as any).aistudio?.openSelectKey();
-          // Assume success after opening the dialog to avoid race conditions
-          setHasAuth(true);
-          apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
-        }
-      }
-
-      // Final fallback check
-      if (!apiKey) {
-        // If still no key, we try to proceed anyway as the platform might inject it late
-        apiKey = (window as any).process?.env?.GEMINI_API_KEY || (window as any).process?.env?.API_KEY;
-      }
-
-      const ai = new GoogleGenAI({ apiKey: apiKey || "" });
+      const ai = new GoogleGenAI({ apiKey });
       const responseStream = await ai.models.generateContentStream({
         model: "gemini-3-flash-preview",
         contents: userMsg,
@@ -177,17 +149,18 @@ export default function App() {
             <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Sovereign Sentry // Void-Metal Interface</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => (window as any).aistudio?.openSelectKey()}
-            className={cn(
-              "text-[10px] uppercase tracking-widest px-3 py-1 rounded border transition-all",
-              hasAuth ? "border-zinc-800 text-zinc-500" : "border-red-900 bg-red-950/20 text-red-500 animate-pulse"
-            )}
-          >
-            {hasAuth ? "VOID_AUTHORIZED" : "AUTHORIZE_VOID"}
-          </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                <span className="text-[10px] uppercase tracking-widest text-zinc-500">Telegram_Vein_Active</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                <span className="text-[10px] uppercase tracking-widest text-zinc-500">Void_Link_Active</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
             <button onClick={() => setIsMuted(!isMuted)}>
               {isMuted ? <VolumeX className="w-4 h-4 text-zinc-700" /> : <Volume2 className="w-4 h-4 text-zinc-700 hover:text-red-600" />}
             </button>
