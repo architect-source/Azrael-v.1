@@ -1,15 +1,14 @@
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",
-        "destination": "/index.html"
+        "run": {
+          "serviceId": "azrael-v1-core",
+          "region": "us-central1"
+        }
       }
     ]
   }
