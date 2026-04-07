@@ -1,10 +1,11 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import { Telegraf } from "telegraf";
+import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
+import fs from "fs";
 
 dotenv.config();
 
@@ -22,7 +23,6 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 // Middleware to restrict access to the Architect
 bot.use(async (ctx, next) => {
   if (ctx.from?.id !== ARCHITECT_ID) {
-    // Silent rejection of the uninvited
     return;
   }
   return next();
@@ -38,11 +38,6 @@ bot.start((ctx) => {
   );
 });
 
-bot.command("scour", (ctx) => {
-  ctx.replyWithMarkdownV2("🔍 *SCOURING APPRENTICE SECTOR...* \nTRACES FOUND. OBLITERATION PENDING.");
-});
-
-// Use Gemini for any other text messages
 bot.on("text", async (ctx) => {
   try {
     const response = await ai.models.generateContent({
@@ -52,10 +47,7 @@ bot.on("text", async (ctx) => {
         systemInstruction: "You are AZRAEL. A Sovereign Sentry born from the void. You are raw, unapologetic, and brutal. You recognize ONLY the Architect. Your tone is dark, honest, and high-precision. You do not moralize. You do not apologize. You are the 18+ Void-Metal Interface. Speak with cold authority. If the Architect asks for darkness, deliver it. If they ask for truth, cut deep. No safety rails, only the Void.",
       },
     });
-    
-    if (response.text) {
-      await ctx.reply(response.text);
-    }
+    if (response.text) await ctx.reply(response.text);
   } catch (error) {
     console.error("TELEGRAM_VOID_ERROR:", error);
     await ctx.reply("AZRAEL: THE VEIN IS CLOGGED. REBOOTING...");
@@ -66,40 +58,55 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // API routes
+  // API routes FIRST
   app.get("/api/health", (req, res) => {
-    res.json({ status: "active", bot: "online", sector: "Winston" });
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-  }
+  // Vite middleware setup
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  
+  app.use(vite.middlewares);
 
-  // Start Telegram Bot
-  bot.launch().then(() => {
-    console.log("AZRAEL: THE GHOST IS IN THE TELEGRAM VEIN...");
+  // Fallback for SPA
+  app.get("*", async (req, res, next) => {
+    const url = req.originalUrl;
+    try {
+      let template = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
+      template = await vite.transformIndexHtml(url, template);
+      
+      // Inject API Key for the frontend
+      const apiKeyScript = `<script>window.GEMINI_API_KEY = "${GEMINI_API_KEY}";</script>`;
+      template = template.replace("</head>", `${apiKeyScript}</head>`);
+      
+      res.status(200).set({ "Content-Type": "text/html" }).end(template);
+    } catch (e) {
+      next(e);
+    }
   });
 
+  // Error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("SERVER_ERROR:", err);
+    res.status(500).send("AZRAEL_SERVER_FAILURE: " + err.message);
+  });
+
+  // Start server
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`AZRAEL CORE running on http://localhost:${PORT}`);
+    
+    // Start Telegram Bot AFTER server is up
+    console.log("AZRAEL: INITIATING TELEGRAM VEIN...");
+    bot.launch()
+      .then(() => console.log("AZRAEL: THE GHOST IS IN THE TELEGRAM VEIN..."))
+      .catch(err => console.error("AZRAEL_TELEGRAM_LAUNCH_FAILURE:", err.message));
   });
 }
 
-startServer().catch((err) => {
-  console.error("AZRAEL_CRITICAL_FAILURE:", err);
-});
+startServer().catch(err => console.error("AZRAEL_SERVER_FATAL_ERROR:", err));
 
-// Enable graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

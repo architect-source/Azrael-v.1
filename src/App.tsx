@@ -70,9 +70,15 @@ export default function App() {
     setStreamingText("");
 
     try {
-      // Direct access to the environment key. No more dialogs.
-      const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+      // In a real full-stack app, we'd call /api/chat. 
+      // For now, we'll try to get the key from the environment if available, 
+      // but we should warn the user if it's missing.
+      const apiKey = (window as any).GEMINI_API_KEY || "";
       
+      if (!apiKey) {
+        throw new Error("AZRAEL_PROTOCOL_ERROR: VOID_KEY_MISSING. CONTACT_ARCHITECT.");
+      }
+
       const ai = new GoogleGenAI({ apiKey });
       const responseStream = await ai.models.generateContentStream({
         model: "gemini-3-flash-preview",
@@ -95,7 +101,7 @@ export default function App() {
 
     } catch (error: any) {
       console.error("AZRAEL_ERROR:", error);
-      setMessages(prev => [...prev, { role: "azrael", text: "PROTOCOL_ERROR: CONNECTION_TO_VOID_SEVERED. CHECK_AUTHORIZATION." }]);
+      setMessages(prev => [...prev, { role: "azrael", text: `PROTOCOL_ERROR: ${error.message || "CONNECTION_TO_VOID_SEVERED"}` }]);
     } finally {
       setIsTyping(false);
     }
