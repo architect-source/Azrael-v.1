@@ -163,8 +163,9 @@ async function startServer() {
   app.use(vite.middlewares);
   app.use(cors({
     origin: (origin, callback) => {
+      const isDev = process.env.NODE_ENV !== "production";
       const allowedOrigins = ["https://azreal-v1.vercel.app", "http://localhost:3000", "http://localhost:5173"];
-      if (!origin || allowedOrigins.includes(origin) || origin.includes("localhost")) {
+      if (!origin || isDev || allowedOrigins.includes(origin) || origin.includes("localhost")) {
         callback(null, true);
       } else {
         callback(new Error("VOID_ACCESS_DENIED"));
@@ -232,6 +233,12 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`⚡ AZRAEL CORE: Port ${PORT}`);
+    
+    // Initialize Shadow Ledger
+    if (!fs.existsSync(LOG_FILE)) {
+      fs.writeFileSync(LOG_FILE, `[${new Date().toISOString()}] CORE_INITIALIZED | Winston Sector Protected\n`);
+    }
+
     const botInstance = getBot();
     if (botInstance) {
       botInstance.launch()

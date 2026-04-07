@@ -74,7 +74,7 @@ export default function AzraelInterface() {
         const data = await res.json();
         if (data.logs) setLogs(data.logs);
       } catch (e) {
-        console.error("LOG_FETCH_FAILURE");
+        console.error("LOG_FETCH_FAILURE:", e);
       }
     };
 
