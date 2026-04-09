@@ -22,6 +22,7 @@ import {
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { MatrixRain } from "./components/MatrixRain";
+import { getAzraelCanister } from "./services/icService";
 
 // Utility for Tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -49,8 +50,17 @@ export default function AzraelInterface() {
     void_integrity: 100,
   });
   const [logs, setLogs] = useState<string[]>([]);
+  const [icCanister, setIcCanister] = useState<any>(null);
   
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const initIC = async () => {
+      const canister = await getAzraelCanister();
+      setIcCanister(canister);
+    };
+    initIC();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setBooted(true), 1500);
@@ -68,13 +78,34 @@ export default function AzraelInterface() {
     if (!booted) return;
     
     const fetchLogs = async () => {
+      let backendUrl = import.meta.env.VITE_BACKEND_URL || "https://void-metal-studio-8v2.caffeine.xyz";
+      
+      // Safety: If VITE_BACKEND_URL is localhost but we are on a remote host, 
+      // use relative paths instead to avoid "Failed to fetch"
+      if (backendUrl.includes("localhost") && !window.location.hostname.includes("localhost")) {
+        backendUrl = "";
+      }
+
+      const targetUrl = `${backendUrl}/api/logs`;
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
-        const res = await fetch(`${backendUrl}/api/logs`);
+        const res = await fetch(targetUrl);
+        if (!res.ok) throw new Error(`HTTP_ERROR: ${res.status}`);
         const data = await res.json();
-        if (data.logs) setLogs(data.logs);
+        
+        // Merge with IC logs if available
+        let combinedLogs = data.logs || [];
+        if (icCanister) {
+          try {
+            const icLogs = await icCanister.getSovereignLogs();
+            combinedLogs = [...combinedLogs, ...icLogs.map((l: string) => `[IC] ${l}`)];
+          } catch (err) {
+            console.warn("IC_LOG_FETCH_FAILURE:", err);
+          }
+        }
+        
+        setLogs(combinedLogs);
       } catch (e) {
-        console.error("LOG_FETCH_FAILURE:", e);
+        console.error(`LOG_FETCH_FAILURE [Target: ${targetUrl}]:`, e);
       }
     };
 
@@ -100,7 +131,14 @@ export default function AzraelInterface() {
     setIsTyping(true);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+      let backendUrl = import.meta.env.VITE_BACKEND_URL || "https://void-metal-studio-8v2.caffeine.xyz";
+      
+      // Safety: If VITE_BACKEND_URL is localhost but we are on a remote host, 
+      // use relative paths instead to avoid "Failed to fetch"
+      if (backendUrl.includes("localhost") && !window.location.hostname.includes("localhost")) {
+        backendUrl = "";
+      }
+
       const response = await fetch(`${backendUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,7 +188,18 @@ export default function AzraelInterface() {
                 Abort_Link
               </button>
               <button 
-                onClick={() => setIsVerified(true)}
+                onClick={async () => {
+                  if (icCanister) {
+                    try {
+                      const architectId = "7421396215";
+                      const result = await icCanister.checkIn(architectId);
+                      console.log("IC_VERIFICATION:", result);
+                    } catch (err) {
+                      console.error("IC_VERIFICATION_FAILURE:", err);
+                    }
+                  }
+                  setIsVerified(true);
+                }}
                 className="py-3 bg-red-600 text-white rounded-lg text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
               >
                 Enter_Void

@@ -156,16 +156,17 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
+  // 1. Global Middleware
   app.use(cors({
     origin: (origin, callback) => {
       const isDev = process.env.NODE_ENV !== "production";
-      const allowedOrigins = ["https://azreal-v1.vercel.app", "http://localhost:3000", "http://localhost:5173"];
-      if (!origin || isDev || allowedOrigins.includes(origin) || origin.includes("localhost")) {
+      const allowedOrigins = [
+        "https://azreal-v1.vercel.app", 
+        "http://localhost:3000", 
+        "http://localhost:5173",
+        "https://void-metal-studio-8v2.caffeine.xyz"
+      ];
+      if (!origin || isDev || allowedOrigins.includes(origin) || origin.includes("localhost") || origin.endsWith(".caffeine.ai") || origin.endsWith(".caffeine.xyz")) {
         callback(null, true);
       } else {
         callback(new Error("VOID_ACCESS_DENIED"));
@@ -176,6 +177,7 @@ async function startServer() {
   }));
   app.use(express.json());
 
+  // 2. API Routes (Before Vite)
   app.get("/api/health", (req, res) => res.json({ status: "online" }));
 
   app.get("/api/logs", (req, res) => {
@@ -222,14 +224,29 @@ async function startServer() {
     }
   });
 
-  app.get("*", async (req, res, next) => {
-    try {
-      let template = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
-      template = await vite.transformIndexHtml(req.originalUrl, template);
-      const script = `<script>window.GEMINI_API_KEY = "${GEMINI_API_KEY}";</script>`;
-      res.status(200).set({ "Content-Type": "text/html" }).end(template.replace("</head>", `${script}</head>`));
-    } catch (e) { next(e); }
-  });
+  // 3. Static Assets & SPA Fallback
+  if (process.env.NODE_ENV === "production") {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  } else {
+    // Vite Middleware (Development)
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+
+    app.get("*", async (req, res, next) => {
+      try {
+        let template = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) { next(e); }
+    });
+  }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`⚡ AZRAEL CORE: Port ${PORT}`);
