@@ -8,7 +8,8 @@ const idlFactory = ({ IDL }: any) => {
   });
 };
 
-const canisterId = import.meta.env.VITE_IC_CANISTER_ID || "";
+const canisterId = import.meta.env.VITE_IC_CANISTER_ID || "uxrrr-q7777-77774-qaaaq-cai";
+const icHost = import.meta.env.VITE_IC_HOST || "https://ic0.app";
 
 export const getAzraelCanister = async () => {
   if (!canisterId) {
@@ -16,13 +17,15 @@ export const getAzraelCanister = async () => {
     return null;
   }
 
-  const agent = new HttpAgent({ host: "https://ic0.app" });
+  const agent = new HttpAgent({ host: icHost });
   
-  // Only needed for local development, but good practice
-  if (process.env.NODE_ENV !== "production") {
-    await agent.fetchRootKey().catch((err) => {
-      console.warn("Unable to fetch root key. Check your local replica.", err);
-    });
+  // If not mainnet, we MUST fetch the root key for certificate validation
+  if (!icHost.includes("ic0.app") && !icHost.includes("icp0.io")) {
+    try {
+      await agent.fetchRootKey();
+    } catch (err) {
+      console.error("IC_ROOT_KEY_FETCH_FAILURE: Ensure your replica is reachable at", icHost, err);
+    }
   }
 
   return Actor.createActor(idlFactory, {

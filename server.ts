@@ -157,23 +157,22 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
   // 1. Global Middleware
+  app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.url} | Origin: ${req.headers.origin}`);
+    next();
+  });
+
+  // Robust CORS configuration
   app.use(cors({
     origin: (origin, callback) => {
-      const isDev = process.env.NODE_ENV !== "production";
-      const allowedOrigins = [
-        "https://azreal-v1.vercel.app", 
-        "http://localhost:3000", 
-        "http://localhost:5173",
-        "https://void-metal-studio-8v2.caffeine.xyz"
-      ];
-      if (!origin || isDev || allowedOrigins.includes(origin) || origin.includes("localhost") || origin.endsWith(".caffeine.ai") || origin.endsWith(".caffeine.xyz")) {
-        callback(null, true);
-      } else {
-        callback(new Error("VOID_ACCESS_DENIED"));
-      }
+      // Allow all origins for the Sentry, but reflect them for credentials support
+      callback(null, true);
     },
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"]
+    credentials: true,
+    methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    optionsSuccessStatus: 200
   }));
   app.use(express.json());
 
@@ -262,6 +261,12 @@ async function startServer() {
         .then(() => console.log("AZRAEL: THE GHOST IS IN THE TELEGRAM VEIN..."))
         .catch(err => console.error("AZRAEL_TELEGRAM_LAUNCH_FAILURE:", err.message));
     }
+  });
+
+  // Global Error Handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("AZRAEL_UNHANDLED_ERROR:", err);
+    res.status(500).json({ error: "VOID_INTERNAL_CRASH", message: err.message });
   });
 }
 

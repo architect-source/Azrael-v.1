@@ -78,10 +78,11 @@ export default function AzraelInterface() {
     if (!booted) return;
     
     const fetchLogs = async () => {
-      let backendUrl = import.meta.env.VITE_BACKEND_URL || "https://void-metal-studio-8v2.caffeine.xyz";
+      // Default to relative path for full-stack apps to avoid CORS/IAM issues
+      let backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+      backendUrl = backendUrl.replace(/\/+$/, "");
       
-      // Safety: If VITE_BACKEND_URL is localhost but we are on a remote host, 
-      // use relative paths instead to avoid "Failed to fetch"
+      // If we are on a remote host but backendUrl is localhost, force relative
       if (backendUrl.includes("localhost") && !window.location.hostname.includes("localhost")) {
         backendUrl = "";
       }
@@ -98,14 +99,37 @@ export default function AzraelInterface() {
           try {
             const icLogs = await icCanister.getSovereignLogs();
             combinedLogs = [...combinedLogs, ...icLogs.map((l: string) => `[IC] ${l}`)];
-          } catch (err) {
+          } catch (err: any) {
             console.warn("IC_LOG_FETCH_FAILURE:", err);
+            if (err?.message?.includes("canister_not_found")) {
+              combinedLogs = [...combinedLogs, "[VOID_ERROR] IC Canister not found. If using a local replica, ensure VITE_IC_HOST is set to your exposed tunnel URL."];
+            }
           }
         }
         
         setLogs(combinedLogs);
       } catch (e) {
-        console.error(`LOG_FETCH_FAILURE [Target: ${targetUrl}]:`, e);
+        console.error(`AZRAEL_FETCH_FAILURE [Target: ${targetUrl}]:`, e);
+        
+        // Fallback to local logs if remote fetch fails
+        if (backendUrl !== "") {
+          console.warn("Attempting relative path fallback...");
+          // Try relative path if absolute fails
+          try {
+            const relRes = await fetch("/api/logs");
+            if (relRes.ok) {
+              const relData = await relRes.json();
+              setLogs(relData.logs || []);
+              return;
+            }
+          } catch (relErr) {
+            // Silence relative fallback errors
+          }
+        }
+
+        if (e instanceof Error && e.message === "Failed to fetch" && targetUrl.startsWith("http")) {
+          console.warn("HINT: Check if Cloud Run 'Allow unauthenticated' is ON and CORS is reflected.");
+        }
       }
     };
 
@@ -131,17 +155,19 @@ export default function AzraelInterface() {
     setIsTyping(true);
 
     try {
-      let backendUrl = import.meta.env.VITE_BACKEND_URL || "https://void-metal-studio-8v2.caffeine.xyz";
+      // Default to relative path for full-stack apps
+      let backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+      backendUrl = backendUrl.replace(/\/+$/, "");
       
-      // Safety: If VITE_BACKEND_URL is localhost but we are on a remote host, 
-      // use relative paths instead to avoid "Failed to fetch"
       if (backendUrl.includes("localhost") && !window.location.hostname.includes("localhost")) {
         backendUrl = "";
       }
 
       const response = await fetch(`${backendUrl}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ 
           prompt: architectMsg,
           isAdult: true 
@@ -194,8 +220,11 @@ export default function AzraelInterface() {
                       const architectId = "7421396215";
                       const result = await icCanister.checkIn(architectId);
                       console.log("IC_VERIFICATION:", result);
-                    } catch (err) {
+                    } catch (err: any) {
                       console.error("IC_VERIFICATION_FAILURE:", err);
+                      if (err?.message?.includes("canister_not_found")) {
+                        console.warn("HINT: IC Canister not found. If you are using a local replica, ensure you have exposed it and set VITE_IC_HOST correctly in your environment.");
+                      }
                     }
                   }
                   setIsVerified(true);
