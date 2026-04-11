@@ -51,6 +51,7 @@ export default function AzraelInterface() {
   });
   const [logs, setLogs] = useState<string[]>([]);
   const [icCanister, setIcCanister] = useState<any>(null);
+  const [coreStatus, setCoreStatus] = useState<"online" | "offline" | "connecting">("connecting");
   
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -78,20 +79,22 @@ export default function AzraelInterface() {
     if (!booted) return;
     
     const fetchLogs = async () => {
-      // Default to relative path for full-stack apps to avoid CORS/IAM issues
-      let backendUrl = import.meta.env.VITE_BACKEND_URL || "";
-      backendUrl = backendUrl.replace(/\/+$/, "");
+      // FORCE relative paths in production/remote environments for full-stack apps
+      // This avoids CORS and IAM issues when the frontend is served by the same core.
+      let backendUrl = window.location.origin;
       
-      // If we are on a remote host but backendUrl is localhost, force relative
-      if (backendUrl.includes("localhost") && !window.location.hostname.includes("localhost")) {
-        backendUrl = "";
+      // Only use VITE_BACKEND_URL if we are on localhost and want to target a remote backend
+      if (window.location.hostname === "localhost" && import.meta.env.VITE_BACKEND_URL) {
+        backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
       }
 
       const targetUrl = `${backendUrl}/api/logs`;
       try {
+        setCoreStatus("connecting");
         const res = await fetch(targetUrl);
         if (!res.ok) throw new Error(`HTTP_ERROR: ${res.status}`);
         const data = await res.json();
+        setCoreStatus("online");
         
         // Merge with IC logs if available
         let combinedLogs = data.logs || [];
@@ -110,6 +113,7 @@ export default function AzraelInterface() {
         setLogs(combinedLogs);
       } catch (e) {
         console.error(`AZRAEL_FETCH_FAILURE [Target: ${targetUrl}]:`, e);
+        setCoreStatus("offline");
         
         // Fallback to local logs if remote fetch fails
         if (backendUrl !== "") {
@@ -155,12 +159,10 @@ export default function AzraelInterface() {
     setIsTyping(true);
 
     try {
-      // Default to relative path for full-stack apps
-      let backendUrl = import.meta.env.VITE_BACKEND_URL || "";
-      backendUrl = backendUrl.replace(/\/+$/, "");
-      
-      if (backendUrl.includes("localhost") && !window.location.hostname.includes("localhost")) {
-        backendUrl = "";
+      // FORCE relative paths in production/remote environments
+      let backendUrl = window.location.origin;
+      if (window.location.hostname === "localhost" && import.meta.env.VITE_BACKEND_URL) {
+        backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
       }
 
       const response = await fetch(`${backendUrl}/api/chat`, {
@@ -181,7 +183,11 @@ export default function AzraelInterface() {
         throw new Error(data.error || "VOID_CONNECTION_ERROR");
       }
     } catch (error: any) {
-      setMessages(prev => [...prev, { role: "azrael", content: `⚠️ **VOID_LINK_SEVERED.** ${error.message || "Check server status."}` }]);
+      let errorMsg = error.message || "Check server status.";
+      if (errorMsg.includes("API key not valid")) {
+        errorMsg = "GEMINI_API_KEY is invalid. Update it in the Settings menu.";
+      }
+      setMessages(prev => [...prev, { role: "azrael", content: `⚠️ **VOID_LINK_SEVERED.** ${errorMsg}` }]);
     } finally {
       setIsTyping(false);
     }
@@ -292,6 +298,21 @@ export default function AzraelInterface() {
         </div>
         <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-4 text-xs text-zinc-500">
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full animate-pulse",
+                coreStatus === "online" ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : 
+                coreStatus === "connecting" ? "bg-yellow-500" : "bg-red-500"
+              )} />
+              <span className="tracking-widest uppercase text-[9px]">Core: {coreStatus}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full animate-pulse",
+                icCanister ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-zinc-800"
+              )} />
+              <span className="tracking-widest uppercase text-[9px]">IC: {icCanister ? "Linked" : "Void"}</span>
+            </div>
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-green-600" />
               <span className="tracking-widest uppercase text-[9px]">Vault: Secure</span>

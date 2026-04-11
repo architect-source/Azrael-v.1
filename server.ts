@@ -46,8 +46,8 @@ function getBot() {
 
 function getAI() {
   if (!ai) {
-    if (!GEMINI_API_KEY) {
-      throw new Error("AZRAEL_FATAL: GEMINI_API_KEY is missing.");
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "TODO_KEYHERE") {
+      throw new Error("AZRAEL_FATAL: GEMINI_API_KEY is missing or set to a placeholder. Check your environment variables.");
     }
     ai = new GoogleGenerativeAI(GEMINI_API_KEY);
   }
@@ -159,7 +159,7 @@ async function startServer() {
   // 1. Global Middleware
   app.use((req, res, next) => {
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.url} | Origin: ${req.headers.origin}`);
+    console.log(`[${timestamp}] ${req.method} ${req.url} | Origin: ${req.headers.origin} | Host: ${req.headers.host}`);
     next();
   });
 

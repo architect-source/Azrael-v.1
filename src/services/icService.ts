@@ -17,6 +17,7 @@ export const getAzraelCanister = async () => {
     return null;
   }
 
+  console.log(`[AZRAEL_IC] Targeting Host: ${icHost} | Canister: ${canisterId}`);
   const agent = new HttpAgent({ host: icHost });
   
   // If not mainnet, we MUST fetch the root key for certificate validation
