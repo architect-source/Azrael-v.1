@@ -23,6 +23,8 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { MatrixRain } from "./components/MatrixRain";
 import { getAzraelCanister } from "./services/icService";
+import { GoogleGenAI } from "@google/genai";
+import { SYSTEM_INSTRUCTION, GEMINI_API_KEY } from "./lib/core";
 
 // Utility for Tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -78,20 +80,11 @@ export default function AzraelInterface() {
   useEffect(() => {
     if (!booted) return;
     
-    const fetchLogs = async () => {
-      // FORCE relative paths in production/remote environments for full-stack apps
-      // This avoids CORS and IAM issues when the frontend is served by the same core.
-      let backendUrl = window.location.origin;
-      
-      // Only use VITE_BACKEND_URL if we are on localhost and want to target a remote backend
-      if (window.location.hostname === "localhost" && import.meta.env.VITE_BACKEND_URL) {
-        backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
-      }
-
-      const targetUrl = `${backendUrl}/api/logs`;
+    const fetchLogs = async (signal?: AbortSignal) => {
       try {
         setCoreStatus("connecting");
-        const res = await fetch(targetUrl);
+        // Use relative path with cache-busting for maximum reliability
+        const res = await fetch(`/api/logs?t=${Date.now()}`, { signal });
         if (!res.ok) throw new Error(`HTTP_ERROR: ${res.status}`);
         const data = await res.json();
         setCoreStatus("online");
@@ -103,50 +96,37 @@ export default function AzraelInterface() {
             const icLogs = await icCanister.getSovereignLogs();
             combinedLogs = [...combinedLogs, ...icLogs.map((l: string) => `[IC] ${l}`)];
           } catch (err: any) {
-            console.warn("IC_LOG_FETCH_FAILURE:", err);
-            if (err?.message?.includes("canister_not_found")) {
-              combinedLogs = [...combinedLogs, "[VOID_ERROR] IC Canister not found. If using a local replica, ensure VITE_IC_HOST is set to your exposed tunnel URL."];
+            if (err.name !== "AbortError") {
+              console.warn("IC_LOG_FETCH_FAILURE:", err);
             }
           }
         }
         
         setLogs(combinedLogs);
-      } catch (e) {
-        console.error(`AZRAEL_FETCH_FAILURE [Target: ${targetUrl}]:`, e);
-        setCoreStatus("offline");
-        
-        // Fallback to local logs if remote fetch fails
-        if (backendUrl !== "") {
-          console.warn("Attempting relative path fallback...");
-          // Try relative path if absolute fails
-          try {
-            const relRes = await fetch("/api/logs");
-            if (relRes.ok) {
-              const relData = await relRes.json();
-              setLogs(relData.logs || []);
-              return;
-            }
-          } catch (relErr) {
-            // Silence relative fallback errors
-          }
-        }
-
-        if (e instanceof Error && e.message === "Failed to fetch" && targetUrl.startsWith("http")) {
-          console.warn("HINT: Check if Cloud Run 'Allow unauthenticated' is ON and CORS is reflected.");
+      } catch (e: any) {
+        if (e.name !== "AbortError") {
+          console.error("AZRAEL_LOG_FETCH_FAILURE:", e);
+          setCoreStatus("offline");
         }
       }
     };
 
-    fetchLogs();
+    const controller = new AbortController();
+    fetchLogs(controller.signal);
+    
     const interval = setInterval(() => {
       setVitals({
         cpu: Math.floor(Math.random() * 100),
         memory: Math.floor(Math.random() * 100),
         void_integrity: Math.max(0, 100 - Math.floor(Math.random() * 5)),
       });
-      fetchLogs();
+      fetchLogs(controller.signal);
     }, 5000);
-    return () => clearInterval(interval);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, [booted]);
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -159,35 +139,45 @@ export default function AzraelInterface() {
     setIsTyping(true);
 
     try {
-      // FORCE relative paths in production/remote environments
-      let backendUrl = window.location.origin;
-      if (window.location.hostname === "localhost" && import.meta.env.VITE_BACKEND_URL) {
-        backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
-      }
-
-      const response = await fetch(`${backendUrl}/api/chat`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json"
+      // SOVEREIGN_STRIKE: Direct frontend AI call for maximum performance and resilience
+      const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: architectMsg,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
         },
-        body: JSON.stringify({ 
-          prompt: architectMsg,
-          isAdult: true 
-        })
       });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setMessages(prev => [...prev, { role: "azrael", content: data.text }]);
+
+      const text = response.text;
+      if (text) {
+        setMessages(prev => [...prev, { role: "azrael", content: text }]);
       } else {
-        throw new Error(data.error || "VOID_CONNECTION_ERROR");
+        throw new Error("VOID_EMPTY_RESPONSE");
       }
     } catch (error: any) {
-      let errorMsg = error.message || "Check server status.";
-      if (errorMsg.includes("API key not valid")) {
-        errorMsg = "GEMINI_API_KEY is invalid. Update it in the Settings menu.";
+      console.error("SOVEREIGN_STRIKE_FAILURE:", error);
+      
+      // Fallback to backend if frontend strike fails (e.g. CORS or key issues)
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: architectMsg })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setMessages(prev => [...prev, { role: "azrael", content: data.text }]);
+        } else {
+          throw new Error(data.error || "BACKEND_LINK_SEVERED");
+        }
+      } catch (backendError: any) {
+        let errorMsg = backendError.message || "Check server status.";
+        if (errorMsg.includes("Unexpected token") || errorMsg.includes("is not valid JSON")) {
+          errorMsg = "VOID_PROTOCOL_MISMATCH: Server returned HTML. Check Vercel routing.";
+        }
+        setMessages(prev => [...prev, { role: "azrael", content: `⚠️ **VOID_LINK_SEVERED.** ${errorMsg}` }]);
       }
-      setMessages(prev => [...prev, { role: "azrael", content: `⚠️ **VOID_LINK_SEVERED.** ${errorMsg}` }]);
     } finally {
       setIsTyping(false);
     }

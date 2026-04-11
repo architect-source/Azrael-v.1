@@ -4,7 +4,7 @@ import { Telegraf } from "telegraf";
 import path from "path";
 import fs from "fs";
 import app from "./api/index"; // Import the Express app from the Vercel API entry
-import { getAI, VOID_SAFETY_SETTINGS, SYSTEM_INSTRUCTION } from "./src/lib/core";
+import { getAI, SYSTEM_INSTRUCTION } from "./src/lib/core";
 
 const LOG_FILE = path.join(process.cwd(), "void_breaches.log");
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
@@ -77,15 +77,16 @@ function setupBot(botInstance: Telegraf) {
 
   botInstance.on("text", async (ctx) => {
     try {
-      const genAI = getAI();
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        safetySettings: VOID_SAFETY_SETTINGS,
-        systemInstruction: SYSTEM_INSTRUCTION,
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: ctx.message.text,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+        },
       });
 
-      const result = await model.generateContent(ctx.message.text);
-      const text = result.response.text();
+      const text = response.text;
       if (text) await ctx.reply(text);
     } catch (error: any) {
       console.error("VOID_ERR:", error);
@@ -135,8 +136,12 @@ async function startServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`⚡ AZRAEL CORE (Local): Port ${PORT}`);
     
-    if (!fs.existsSync(LOG_FILE)) {
-      fs.writeFileSync(LOG_FILE, `[${new Date().toISOString()}] CORE_INITIALIZED | Winston Sector Protected\n`);
+    try {
+      if (!fs.existsSync(LOG_FILE)) {
+        fs.writeFileSync(LOG_FILE, `[${new Date().toISOString()}] CORE_INITIALIZED | Winston Sector Protected\n`);
+      }
+    } catch (e) {
+      console.warn("AZRAEL_LOG_INIT_FAILURE: Shadow Ledger restricted in this sector.");
     }
 
     const botInstance = getBot();

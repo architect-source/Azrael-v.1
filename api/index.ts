@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import fs from "fs";
-import { getAI, VOID_SAFETY_SETTINGS, SYSTEM_INSTRUCTION } from "../src/lib/core";
+import { getAI, SYSTEM_INSTRUCTION } from "../src/lib/core";
 
 const LOG_FILE = path.join(process.cwd(), "void_breaches.log");
 
@@ -24,19 +24,24 @@ app.use(cors({
 app.use(express.json());
 
 // 2. API Routes
-app.get("/api/health", (req, res) => res.json({ status: "online", environment: "vercel" }));
+app.get("/api/health", (req, res) => res.json({ 
+  status: "online", 
+  environment: process.env.VERCEL ? "vercel" : "local",
+  timestamp: new Date().toISOString()
+}));
 
 app.get("/api/logs", (req, res) => {
   try {
+    // Vercel filesystem is read-only, so we handle missing log files gracefully
     if (fs.existsSync(LOG_FILE)) {
       const logs = fs.readFileSync(LOG_FILE, "utf-8");
       const lastLines = logs.split("\n").filter(Boolean).slice(-50);
       res.json({ logs: lastLines });
     } else {
-      res.json({ logs: [] });
+      res.json({ logs: ["AZRAEL: Shadow Ledger is restricted or empty in this sector."] });
     }
   } catch (e) {
-    res.status(500).json({ error: "LEDGER_ACCESS_DENIED" });
+    res.status(500).json({ error: "LEDGER_ACCESS_DENIED", details: String(e) });
   }
 });
 
@@ -45,20 +50,31 @@ app.post("/api/chat", async (req, res) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ error: "Prompt required" });
 
-    const genAI = getAI();
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      safetySettings: VOID_SAFETY_SETTINGS,
-      systemInstruction: SYSTEM_INSTRUCTION,
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+      },
     });
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = response.text;
     res.json({ text });
   } catch (error: any) {
     console.error("API_CHAT_ERR:", error);
     res.status(500).json({ error: error.message || "VOID_CONNECTION_ERROR" });
   }
+});
+
+// Catch-all for API routes to provide better diagnostics
+app.use("/api", (req, res) => {
+  res.status(404).json({ 
+    error: "API_ROUTE_NOT_FOUND", 
+    path: req.path,
+    method: req.method,
+    suggestion: "Check if the route is defined in api/index.ts"
+  });
 });
 
 // Export for Vercel

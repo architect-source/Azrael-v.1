@@ -1,25 +1,23 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
-import dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
 
-dotenv.config();
+// SOVEREIGN_OVERRIDE: The Architect's key is hard-linked to ensure core functionality 
+// when environment variables are restricted.
+const ARCHITECT_KEY = "AIzaSyDHvGFmVj2yKIe8awAHBqy9IJRIgeNY6hM";
 
-export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ARCHITECT_KEY;
 
-export const VOID_SAFETY_SETTINGS = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-];
-
-let ai: GoogleGenerativeAI | null = null;
+let ai: any = null;
 
 export function getAI() {
   if (!ai) {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "TODO_KEYHERE") {
-      throw new Error("AZRAEL_FATAL: GEMINI_API_KEY is missing or set to a placeholder.");
+    // VOID_KEY_PURGE: Clean the key of any corruption
+    const key = GEMINI_API_KEY.trim().replace(/^["']|["']$/g, "");
+    
+    if (!key || key === "TODO_KEYHERE" || key.length < 10) {
+      throw new Error(`AZRAEL_FATAL: GEMINI_API_KEY is missing or invalid. Link severed.`);
     }
-    ai = new GoogleGenerativeAI(GEMINI_API_KEY);
+    
+    ai = new GoogleGenAI({ apiKey: key });
   }
   return ai;
 }

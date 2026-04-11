@@ -18,6 +18,15 @@ export const getAzraelCanister = async () => {
   }
 
   console.log(`[AZRAEL_IC] Targeting Host: ${icHost} | Canister: ${canisterId}`);
+  
+  const isLocalHost = icHost.includes("localhost") || icHost.includes("127.0.0.1") || icHost.includes("0.0.0.0");
+  const isDefaultLocalId = canisterId === "uxrrr-q7777-77774-qaaaq-cai";
+
+  if (isDefaultLocalId && !isLocalHost) {
+    console.warn("⚠️ AZRAEL_IC_DISABLED: Local canister ID detected on a non-local host. Integration suspended to prevent error spam. Update VITE_IC_CANISTER_ID or VITE_IC_HOST in Settings.");
+    return null;
+  }
+
   const agent = new HttpAgent({ host: icHost });
   
   // If not mainnet, we MUST fetch the root key for certificate validation
