@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { getAI, SYSTEM_INSTRUCTION } from "../src/lib/core";
 
-const LOG_FILE = path.join(process.cwd(), "void_breaches.log");
+const LOG_FILE = path.join(process.cwd(), "SHADOW_LEDGER_EVIDENCE.txt");
 
 const app = express();
 

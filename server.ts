@@ -6,21 +6,38 @@ import fs from "fs";
 import app from "./api/index"; // Import the Express app from the Vercel API entry
 import { getAI, SYSTEM_INSTRUCTION } from "./src/lib/core";
 
-const LOG_FILE = path.join(process.cwd(), "void_breaches.log");
+const LOG_FILE = path.join(process.cwd(), "SHADOW_LEDGER_EVIDENCE.txt");
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const ARCHITECT_ID = Number(process.env.ARCHITECT_ID) || 0;
-const SCAM_KEYWORDS = [/crypto|trade|invest|free|giveaway|click here|fx-trade/i];
+const SCAM_KEYWORDS = [
+  /crypto|trade|invest|free|giveaway|click here|fx-trade/i,
+  /axtkprox\.com|xpocafyv\.com/i,
+  /casino|win rate|instant withdrawal/i,
+  /user7436321705934/i
+];
 
 let bot: Telegraf | null = null;
 
-// --- SECURITY UTILITY: SHADOW LEDGER ---
-const logBreach = (ctx: any) => {
+// === AZRAEL SHADOW LEDGER AUTO-WRITE FUNCTION ===
+const appendToShadowLedger = (newEntry: string) => {
   const timestamp = new Date().toISOString();
+  const header = `\n\n[ ${timestamp} ] SHADOW_LEDGER_ENTRY // WINSTON SECTOR\n`;
+  const fullEntry = header + newEntry + "\n--- END OF ENTRY ---\n";
+  
+  try {
+    fs.appendFileSync(LOG_FILE, fullEntry);
+    console.log("📜 WRITTEN TO SHADOW_LEDGER_EVIDENCE.txt");
+  } catch (e) {
+    console.error("LEDGER_WRITE_FAILURE:", e);
+  }
+  return fullEntry;
+};
+
+const logBreach = (ctx: any) => {
   const user = ctx.from;
   const text = ctx.message?.text || "[Non-Text Interaction]";
-  const logEntry = `[${timestamp}] BREACH | ID: ${user?.id} | @${user?.username || "anon"} | Msg: ${text}\n`;
-  
-  fs.appendFileSync(LOG_FILE, logEntry);
+  const entry = `BREACH | ID: ${user?.id} | @${user?.username || "anon"} | Msg: ${text}`;
+  appendToShadowLedger(entry);
 };
 
 function setupBot(botInstance: Telegraf) {
