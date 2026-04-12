@@ -3,7 +3,8 @@ import { createServer as createViteServer } from "vite";
 import { Telegraf } from "telegraf";
 import path from "path";
 import fs from "fs";
-import app, { router } from "./api/index"; // Import the Express app and router from the Vercel API entry
+import cors from "cors";
+import router from "./src/lib/router";
 import { getAI, SYSTEM_INSTRUCTION } from "./src/lib/core";
 
 const LOG_FILE = path.join(process.cwd(), "SHADOW_LEDGER_EVIDENCE.txt");
@@ -16,6 +17,7 @@ const SCAM_KEYWORDS = [
   /user7436321705934/i
 ];
 
+const app = express();
 let bot: Telegraf | null = null;
 
 // === AZRAEL SHADOW LEDGER AUTO-WRITE FUNCTION ===
@@ -127,10 +129,17 @@ function getBot() {
 async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
-  // Mount API Router FIRST to ensure priority over Vite/Static middleware
+  // 1. Global Middleware
+  app.use(cors({
+    origin: true,
+    credentials: true
+  }));
+  app.use(express.json());
+
+  // 2. Mount API Router FIRST to ensure priority over Vite/Static middleware
   app.use("/api", router);
 
-  // Vite Middleware (Development)
+  // 3. Vite Middleware (Development)
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
