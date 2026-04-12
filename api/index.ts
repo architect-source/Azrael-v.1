@@ -26,6 +26,12 @@ app.use(express.json());
 // 2. API Routes (Scoped Router)
 const router = express.Router();
 
+// Diagnostic middleware for the router
+router.use((req, res, next) => {
+  res.setHeader("X-Azrael-Source", "Sovereign-API-Bridge");
+  next();
+});
+
 router.get("/health", (req, res) => res.json({ 
   status: "online", 
   environment: process.env.VERCEL ? "vercel" : "local",
@@ -68,11 +74,10 @@ router.post("/chat", async (req, res) => {
   }
 });
 
-// Mount the router on both /api and / to handle Vercel's flexible routing
+// Mount the router with high priority
 app.use("/api", router);
-app.use("/", router); 
 
-// Catch-all for API routes to provide better diagnostics
+// Fallback for /api to ensure we always return JSON, never HTML
 app.use("/api", (req, res) => {
   res.status(404).json({ 
     error: "API_ROUTE_NOT_FOUND", 

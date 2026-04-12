@@ -85,7 +85,16 @@ export default function AzraelInterface() {
         setCoreStatus("connecting");
         // Use relative path with cache-busting for maximum reliability
         const res = await fetch(`/api/logs?t=${Date.now()}`, { signal });
+        
+        // Diagnostic check for the Sovereign API Bridge
+        const source = res.headers.get("X-Azrael-Source");
+        const contentType = res.headers.get("Content-Type");
+        
         if (!res.ok) throw new Error(`HTTP_ERROR: ${res.status}`);
+        if (!contentType?.includes("application/json")) {
+          throw new Error(`VOID_PROTOCOL_MISMATCH: Expected JSON, received ${contentType || "unknown"}. Source: ${source || "Hijacked"}`);
+        }
+        
         const data = await res.json();
         setCoreStatus("online");
         
