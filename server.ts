@@ -3,10 +3,8 @@ import { createServer as createViteServer } from "vite";
 import { Telegraf } from "telegraf";
 import path from "path";
 import fs from "fs";
-import app from "./api/index"; // Import the Express app from the Vercel API entry
+import app, { router } from "./api/index"; // Import the Express app and router from the Vercel API entry
 import { getAI, SYSTEM_INSTRUCTION } from "./src/lib/core";
-
-import router from "./src/lib/router";
 
 const LOG_FILE = path.join(process.cwd(), "SHADOW_LEDGER_EVIDENCE.txt");
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
