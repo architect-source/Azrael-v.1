@@ -6,6 +6,8 @@ import fs from "fs";
 import app from "./api/index"; // Import the Express app from the Vercel API entry
 import { getAI, SYSTEM_INSTRUCTION } from "./src/lib/core";
 
+import router from "./src/lib/router";
+
 const LOG_FILE = path.join(process.cwd(), "SHADOW_LEDGER_EVIDENCE.txt");
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const ARCHITECT_ID = Number(process.env.ARCHITECT_ID) || 0;
@@ -126,6 +128,9 @@ function getBot() {
 
 async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
+
+  // Mount API Router FIRST to ensure priority over Vite/Static middleware
+  app.use("/api", router);
 
   // Vite Middleware (Development)
   if (process.env.NODE_ENV !== "production") {
