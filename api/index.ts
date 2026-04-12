@@ -23,16 +23,17 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// 2. API Routes
-app.get("/api/health", (req, res) => res.json({ 
+// 2. API Routes (Scoped Router)
+const router = express.Router();
+
+router.get("/health", (req, res) => res.json({ 
   status: "online", 
   environment: process.env.VERCEL ? "vercel" : "local",
   timestamp: new Date().toISOString()
 }));
 
-app.get("/api/logs", (req, res) => {
+router.get("/logs", (req, res) => {
   try {
-    // Vercel filesystem is read-only, so we handle missing log files gracefully
     if (fs.existsSync(LOG_FILE)) {
       const logs = fs.readFileSync(LOG_FILE, "utf-8");
       const lastLines = logs.split("\n").filter(Boolean).slice(-50);
@@ -45,7 +46,7 @@ app.get("/api/logs", (req, res) => {
   }
 });
 
-app.post("/api/chat", async (req, res) => {
+router.post("/chat", async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ error: "Prompt required" });
@@ -66,6 +67,10 @@ app.post("/api/chat", async (req, res) => {
     res.status(500).json({ error: error.message || "VOID_CONNECTION_ERROR" });
   }
 });
+
+// Mount the router on both /api and / to handle Vercel's flexible routing
+app.use("/api", router);
+app.use("/", router); 
 
 // Catch-all for API routes to provide better diagnostics
 app.use("/api", (req, res) => {
