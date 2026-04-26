@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "defaults": {
+    "build": {
+      "packtool": "",
+      "args": "--release"
+    },
+    "replica": {
+      "subnet_type": "system"
+    }
+  },
+  
+  "canisters": {
+    "azrael_backend": {
+      "type": "rust",
+      "package": "azrael_canister",
+      "candid": "src/azrael_canister/azrael.did",
+      "wasm": "target/wasm32-unknown-unknown/release/azrael_canister.wasm",
+      
+      "declarations": {
+        "node_compatibility": true
+      },
+      
+      "init_args": "(record { 
+        proxy_whitelist = vec {};
+        max_session_duration = 86400000000000;
+        dead_drop_enabled = true;
+        tactical_mode = true;
+      })",
+      
+      "shrink": false,
+      "optimize": "cycles"
+    },
+    
+    "azrael_frontend": {
+      "type": "assets",
+      "source": ["dist"],
+      "dependencies": ["azrael_backend"],
+      
+      "build": "npm run build",
+      "wasm": "frontend.wasm",
+      
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://ic0.app https://*.ic0.app; img-src 'self' blob:;"
+      }
+    },
+    
+    "internet_identity": {
+      "type": "custom",
+      "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
+      "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm",
+      "remote": {
+        "id": {
+          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        }
+      }
+    }
+  },
+  
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral",
+      "replica": {
+        "subnet_type": "application"
+      }
+    },
+    
+    "staging": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent",
+      "config": {
+        "PROXY_MODE": "strict",
+        "TEE_REQUIRED": "true",
+        "DEAD_DROP_AUTO": "3600"
+      }
+    },
+    
+    "ic": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent",
+      "config": {
+        "PROXY_MODE": "strict",
+        "TEE_REQUIRED": "true",
+        "DEAD_DROP_AUTO": "1800",
+        "TACTICAL_WIPE": "true"
+      }
+    }
+  },
+  
+  "output_env_file": ".env"
+}

@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "ShadowEntry": {
+      "title": "ShadowEntry",
+      "description": "Evidence of a breach or scam attempt",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["BREACH", "SCAM", "SYSTEM"] },
+        "content": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "principal": { "type": "string" }
+      },
+      "required": ["timestamp", "type", "content"]
+    },
+    "UserSession": {
+      "title": "UserSession",
+      "description": "Active sovereign session metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "owner": { "type": "string" },
+        "state": { "type": "string", "enum": ["active", "degraded", "survival", "guarding"] },
+        "lastHeartbeat": { "type": "string", "format": "date-time" },
+        "messageCount": { "type": "number" }
+      },
+      "required": ["id", "owner", "state", "lastHeartbeat"]
+    }
+  },
+  "firestore": {
+    "/shadow_ledger/{entryId}": {
+      "schema": "ShadowEntry",
+      "description": "Global log of all neutralized threats"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "UserSession",
+      "description": "Metadata for active user sessions"
+    }
+  }
+}

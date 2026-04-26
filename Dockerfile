@@ -1,5 +1,21 @@
-FROM python:3.9-slim
+# AZRAEL CORE: DOCKERFILE
+FROM node:20-slim
+
 WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
 COPY . .
-RUN pip install flask pyTelegramBotAPI google-generativeai gunicorn
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app
+
+# Build the frontend assets for the "Truth Giver" interface
+RUN npm run build
+
+# Cloud Run default port
+ENV PORT=8080
+EXPOSE 8080
+
+# Ignite the Sentry
+CMD ["npm", "start"]

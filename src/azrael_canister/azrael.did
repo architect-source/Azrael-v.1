@@ -1,0 +1,204 @@
+type AzraelError = variant {
+  SessionNotFound;
+  HeartbeatTimeout;
+  ConstraintViolation : text;
+  SystemRecovering;
+  StorageFull;
+  AIUnavailable;
+  IdentityExpired;
+  IdentityWrongTarget;
+  IdentityRequired;
+  Unauthorized;
+  SerializationError;
+  DeserializationError;
+  CompleteDataLoss;
+  InvalidStateTransition;
+  RecoveryNotComplete;
+  UnsupportedCryptoVersion;
+  Tactical : TacticalError;
+  TEE : TEError;
+  ThresholdDenied;            // Auth failed
+  SentryReforming;            // System not ready
+  WhisperLost;                // Message failed, but may retry
+  VoidUnreachable;            // Network/system failure
+};
+
+type SentryState = variant { Vigilant; Dimmed; Guarding; Reforming };
+
+type SentryResponse = record {
+  response : text;
+  sentry_state : SentryState;
+  integrity : nat8;
+  echoes : nat64;
+};
+
+type SentryVitals = record {
+  state : SentryState;
+  core_integrity : nat8;
+  echoes : nat64;
+  last_preservation : nat64;
+};
+
+type Awakening = record {
+  session_id : text;
+  seed : blob;
+  threshold_crossed : nat64;
+};
+
+type TacticalError = variant {
+  Unauthorized;
+  InsufficientSignatures;
+  InvalidSignature;
+  UnknownMeasurement;
+  PCRMismatch : nat;
+  Expired;
+  StaleAttestation;
+};
+
+type TEError = variant {
+  UnknownMeasurement;
+  PCRMismatch : nat;
+  Expired;
+  StaleAttestation;
+  InvalidSignature;
+};
+
+type TacticalLevel = variant { Standard; Elevated; Ghost; Black };
+type CompartmentStatus = variant { Active; Suspicious; Quarantined; Terminated };
+type SwitchType = variant { ProxyHalt; SessionFreeze; AISilence; DeadDrop; FullLockdown };
+
+type CompartmentInfo = record {
+  session_id : text;
+  owner : principal;
+  memory_quota : nat64;
+  cycle_quota : nat64;
+  network_allowlist : vec text;
+  created_at : nat64;
+  threat_score : nat32;
+  status : CompartmentStatus;
+};
+
+type TEEType = variant { IntelSGX; AMDSEV; IntelTDX; AWSNitro };
+
+type AttestationReport = record {
+  tee_type : TEEType;
+  measurement : blob;
+  timestamp : nat64;
+  nonce : blob;
+  quote : blob;
+  pcr_values : vec blob;
+};
+
+type TEEIdentity = record {
+  measurement : blob;
+  tee_type : TEEType;
+  verified_at : nat64;
+};
+
+type ChatResponse = record {
+  session_id : text;
+  content : text;  // Empty if null action
+  state : SystemState;
+  timestamp : nat64;
+  signature : blob;
+  requires_proxy : bool;
+  msg_id : nat64;
+};
+
+type EncryptedPayload = record {
+  ciphertext : blob;
+  nonce : blob;
+  version : text;
+};
+
+type Delegation = record {
+  pubkey : blob;
+  expiration : nat64;
+  targets : opt vec principal;
+};
+
+type SignedDelegation = record {
+  delegation : Delegation;
+  signature : blob;
+};
+
+type SystemState = variant { Active; Degraded; Survival; Recovery };
+
+type ModelSpec = variant { GeminiFlash; GeminiPro; Custom : text };
+
+type ProxyRequest = record {
+  request_id : text;
+  session_id : text;
+  timestamp : nat64;
+  nonce : nat64;
+  encrypted_payload_hash : blob;
+  context_summary : text;
+  preferred_model : ModelSpec;
+  max_tokens : opt nat32;
+  temperature : opt float32;
+  canister_signature : blob;
+};
+
+type ProxyResponse = record {
+  request_id : text;
+  timestamp : nat64;
+  result : ProxyResult;
+  proxy_signature : blob;
+  response_hash : blob;
+};
+
+type ProxyResult = variant {
+  Success : AISuccess;
+  Degraded : DegradedResponse;
+  Error : ProxyError;
+};
+
+type AISuccess = record {
+  content : text;
+  model_used : ModelSpec;
+  tokens_used : nat32;
+  finish_reason : text;
+  latency_ms : nat32;
+};
+
+type DegradedResponse = record {
+  reason : variant { RateLimit; ModelUnavailable; ContentFiltered; Timeout };
+  fallback_content : text;
+  retry_after : opt nat64;
+};
+
+type ProxyError = variant {
+  InvalidRequest : text;
+  Unauthorized : text;
+  ReplayDetected;
+  SignatureInvalid;
+  InternalError : text;
+};
+
+type Session = record {
+  id : text;
+  owner : principal;
+  state : SystemState;
+  last_heartbeat : nat64;
+  message_count : nat64;
+  checksum : nat64;
+};
+
+service : {
+  create_session : () -> (variant { Ok : Session; Err : AzraelError });
+  heartbeat : (text) -> (variant { Ok; Err : AzraelError });
+  chat : (text, EncryptedPayload, opt SignedDelegation) -> (variant { Ok : ChatResponse; Err : AzraelError });
+  get_session : (text) -> (opt Session) query;
+  checkpoint : () -> (nat64);
+  register_proxy : (principal, text) -> (variant { Ok; Err : AzraelError });
+  remove_proxy : (principal) -> (variant { Ok; Err : AzraelError });
+  list_proxies : () -> (vec record { principal; text; nat64 }) query;
+  disable_proxies : () -> ();
+  enable_proxies : () -> ();
+  emergency_trigger : (SwitchType, text) -> (variant { Ok; Err : AzraelError });
+  get_compartment_status : (text) -> (opt CompartmentInfo) query;
+  verify_tee_attestation : (AttestationReport) -> (variant { Ok : TEEIdentity; Err : AzraelError });
+  awaken : (opt SignedDelegation) -> (variant { Ok : Awakening; Err : AzraelError });
+  whisper : (text, EncryptedPayload, opt SignedDelegation) -> (variant { Ok : SentryResponse; Err : AzraelError });
+  sentry_vitals : (text) -> (SentryVitals) query;
+};

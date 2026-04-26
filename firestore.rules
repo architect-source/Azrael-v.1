@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: shadow_ledger
+    // Document ID: auto-generated
+    // Fields:
+    //   - timestamp: timestamp (required)
+    //   - type: string (required, enum: BREACH, SCAM, SYSTEM)
+    //   - content: string (required, max 1000 chars)
+    //   - sessionId: string (optional)
+    //   - principal: string (optional)
+    //
+    // Collection: sessions
+    // Document ID: sessionId
+    // Fields:
+    //   - id: string (required)
+    //   - owner: string (required, matches auth.uid)
+    //   - state: string (required, enum: active, degraded, survival, guarding)
+    //   - lastHeartbeat: timestamp (required)
+    //   - messageCount: number (required)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "architect@azrael-core.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidShadowEntry(data) {
+      return data.keys().hasAll(['timestamp', 'type', 'content']) &&
+             data.type in ['BREACH', 'SCAM', 'SYSTEM'] &&
+             data.content is string && data.content.size() <= 1000;
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['id', 'owner', 'state', 'lastHeartbeat', 'messageCount']) &&
+             data.owner == request.auth.uid &&
+             data.state in ['active', 'degraded', 'survival', 'guarding'] &&
+             data.messageCount is number;
+    }
+
+    // Shadow Ledger: Publicly readable (for transparency), but only system/admin can write.
+    // Actually, following "Initially restricted", we require authentication for read too.
+    match /shadow_ledger/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidShadowEntry(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Sessions: Only the owner can read/write their own session metadata.
+    match /sessions/{sessionId} {
+      allow read, write: if isAuthenticated() && (isOwner(resource.data.owner) || isOwner(request.resource.data.owner) || isAdmin());
+    }
+  }
+}

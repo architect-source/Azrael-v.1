@@ -1,4 +1,4 @@
 .env
-void_breaches.log
+SHADOW_LEDGER_EVIDENCE.txt
 node_modules/
 dist/
