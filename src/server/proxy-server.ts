@@ -1,13 +1,11 @@
 import express from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getAI } from '../lib/core';
 import * as ed from '@noble/ed25519';
 import { Principal } from '@dfinity/principal';
 import crypto from 'crypto';
 
 const app = express();
 app.use(express.json());
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 // Proxy's ICP identity (registered with canister)
 const PROXY_PRINCIPAL = process.env.PROXY_PRINCIPAL || "anonymous";
@@ -50,11 +48,13 @@ app.post('/api/proxy-chat', async (req, res) => {
     
     // 3. Call Gemini
     const startTime = Date.now();
-    const modelName = 'gemini-2.0-flash';
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const ai = getAI();
     
-    const result = await model.generateContent(proxyReq.context_summary);
-    const content = result.response.text();
+    const result = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: proxyReq.context_summary
+    });
+    const content = result.text || "VOID_METAL_SILENCE";
     const latency = Date.now() - startTime;
     
     // 4. Build and sign response

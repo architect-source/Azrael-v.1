@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Hammer, Download, Terminal, Zap, Package, Eye } from 'lucide-react';
+import { getAIClient } from '../ai-client';
 
 export const VoidMetalStudio: React.FC = () => {
     const [prompt, setPrompt] = useState('');
@@ -23,38 +24,86 @@ export const VoidMetalStudio: React.FC = () => {
         setPreviewContent(null);
 
         try {
+            // 1. Client-Side AI Generation
+            const ai = getAIClient();
+            const systemPrompt = `You are AZRAEL // S-1792 Synthesis Engine.
+The user wants to "One-Tap" synthesize a project based on: "${prompt}".
+Identify if they want an App, a script, a logic module, an image (img), or a video (vid).
+Generate valid, working code or data representation.
+Output as a JSON object:
+{
+    "type": "app" | "script" | "logic" | "img" | "vid",
+    "filename": "string (ensure .apk for app, .ts for logic, .jpg/.mp4 for media)",
+    "content": "The generated code or base64/placeholder for media",
+    "readmes": "Brief summary of what this is."
+}`;
+
+            let result;
+            let retries = 3;
+            let delay = 1000;
+            
+            for (let i = 0; i < retries; i++) {
+                try {
+                    result = await ai.models.generateContent({
+                        model: 'gemini-3-flash-preview',
+                        contents: `SYNTHESIS_DIRECTIVE: ${prompt}`,
+                        config: {
+                            systemInstruction: systemPrompt,
+                            responseMimeType: 'application/json'
+                        }
+                    });
+                    break;
+                } catch (err: any) {
+                    if ((err.status === 503 || err.message?.includes('503')) && i < retries - 1) {
+                        addLog(`CONGESTION_DETECTED. REATTEMPTING_IN_${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
+                    throw err;
+                }
+            }
+
+            if (!result) throw new Error("SYNTHESIS_FAILED: Model unreachable.");
+
+            let blueprint;
+            try {
+                const textOutput = result.text || "{}";
+                blueprint = JSON.parse(textOutput);
+            } catch (e) {
+                console.error("JSON_PARSE_FAILURE:", e);
+                throw new Error("SYNTHESIS_CORRUPTION: Output was not valid JSON.");
+            }
+            if (!blueprint.content) {
+                throw new Error("ARCHITECTURAL_VOID: Synthesis produced no substance.");
+            }
+
+            addLog("FORGE IGNITED. BLUEPRINT RECEIVED.");
+            setPreviewContent(blueprint.content);
+            setStatus('forging');
+
+            // 2. Send to backend for Packaging
+            addLog("TRANSMITTING TO THE FORGE...");
             const response = await fetch('/api/synthesize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt })
+                body: JSON.stringify({ 
+                    blueprint,
+                    type: blueprint.type 
+                })
             });
             
-            const reader = response.body?.getReader();
-            if (!reader) throw new Error("No reader");
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunk = new TextDecoder().decode(value);
-                const lines = chunk.split('\n').filter(l => l.trim());
-                
-                for (const line of lines) {
-                    try {
-                        const data = JSON.parse(line);
-                        if (data.log) addLog(data.log);
-                        if (data.status) setStatus(data.status);
-                        if (data.preview) setPreviewContent(data.preview);
-                        if (data.zipUrl) setPayloadUrl(data.zipUrl);
-                    } catch (e) {
-                        // Not JSON, maybe raw log
-                        addLog(line);
-                    }
-                }
-            }
+            if (data.log) addLog(data.log);
+            if (data.status) setStatus(data.status);
+            if (data.downloadUrl) setPayloadUrl(data.downloadUrl);
+
         } catch (err: any) {
             setStatus('error');
             addLog(`SYSTEM FAILURE: ${err.message}`);
+            console.error(err);
         }
     };
 
@@ -144,10 +193,12 @@ export const VoidMetalStudio: React.FC = () => {
                                 </div>
                                 <a
                                     href={payloadUrl}
-                                    download="SYTHESIS_PAYLOAD.zip"
+                                    download={payloadUrl.split('/').pop() || 'AZRAEL_PAYLOAD'}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-400 text-black px-8 py-3 font-bold uppercase tracking-widest text-sm transition-all"
                                 >
-                                    <Download className="w-4 h-4" /> Download ZIP
+                                    <Download className="w-4 h-4" /> {payloadUrl.endsWith('.apk') ? 'Download APK' : 'Download File'}
                                 </a>
                             </motion.div>
                         ) : (

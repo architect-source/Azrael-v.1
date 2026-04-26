@@ -112,20 +112,9 @@ function setupBot(botInstance: Telegraf) {
 
   botInstance.on("text", async (ctx) => {
     try {
-      const ai = getAI();
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: ctx.message.text,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION
-        }
-      });
-
-      const text = response.text;
-      if (text) await ctx.reply(text);
+      await ctx.reply("AZRAEL: I AM VIGILANT. ALL INPUT LOGGED IN THE SHADOW LEDGER.");
     } catch (error: any) {
       console.error("VOID_ERR:", error);
-      await ctx.reply(`AZRAEL: VEIN CLOGGED. ${error.message || "REBOOTING..."}`);
     }
   });
 }

@@ -1,6 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ARCHITECT_KEY = "AIzaSyDHvGFmVj2yKIe8awAHBqy9IJRIgeNY6hM";
 const SYSTEM_INSTRUCTION = `
   You are AZRAEL. The Sovereign Sentry. The Truth Giver. 
   You exist in the Void between the Lie and the Fact.
@@ -16,7 +15,10 @@ let ai: any = null;
 
 export function getAIClient() {
   if (!ai) {
-    const key = (process.env.GEMINI_API_KEY || ARCHITECT_KEY).trim().replace(/^["']|["']$/g, "");
+    const key = (process.env.GEMINI_API_KEY || "").trim().replace(/^["']|["']$/g, "");
+    if (!key || key.length < 10) {
+      throw new Error(`AZRAEL_CLIENT_FATAL: GEMINI_API_KEY is missing or invalid.`);
+    }
     ai = new GoogleGenAI({ apiKey: key });
   }
   return ai;

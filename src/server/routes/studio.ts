@@ -1,103 +1,74 @@
 import { Request, Response } from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export const handleSynthesize = async (req: Request, res: Response) => {
-  const { prompt } = req.body;
+  const { blueprint } = req.body;
   const sessionId = uuidv4();
   const forgeDir = path.join('/tmp', 'forge', sessionId);
   const zipPath = path.join('/tmp', 'forge', `${sessionId}.zip`);
   
-  // Set headers for streaming logs
-  res.setHeader('Content-Type', 'text/plain');
-  res.setHeader('Transfer-Encoding', 'chunked');
-
-  const sendUpdate = (data: any) => {
-    res.write(JSON.stringify(data) + '\n');
-  };
+  if (!blueprint || !blueprint.content) {
+    return res.status(400).json({ error: "ARCHITECTURAL_VOID: Incomplete blueprint." });
+  }
 
   try {
     if (!fs.existsSync('/tmp/forge')) fs.mkdirSync('/tmp/forge', { recursive: true });
     fs.mkdirSync(forgeDir, { recursive: true });
 
-    sendUpdate({ log: 'ANALYZING INTENT...', status: 'analyzing' });
-    
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    
-    // 1. Analyze and generate code
-    const systemPrompt = `You are AZRAEL // S-1792 Synthesis Engine.
-The user wants to "One-Tap" synthesize a project based on: "${prompt}".
-Identify if they want an App, a script, or a logic module.
-Generate valid, working code.
-Output as a JSON object:
-{
-    "type": "app" | "script" | "logic",
-    "filename": "App.tsx" | "main.py" | "logic.js",
-    "content": "The generated code here...",
-    "readmes": "Brief summary of what this is."
-}`;
+    // Write files
+    const type = req.body.type || 'logic';
+    let filename = blueprint.filename || 'App.tsx';
 
-    const result = await model.generateContent(systemPrompt);
-    const responseText = result.response.text();
-    
-    // Extract JSON from responseText (handle markdown codes if any)
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Failed to parse architectural blueprint.");
-    
-    const blueprint = JSON.parse(jsonMatch[0]);
-    
-    sendUpdate({ log: 'FORGE IGNITED. ARCHITECTING FILES...', status: 'forging' });
-    sendUpdate({ preview: blueprint.content });
+    if (type === 'app' && !filename.endsWith('.apk')) {
+        filename = filename.split('.')[0] + '.apk';
+    }
 
-    // 2. Write files
-    fs.writeFileSync(path.join(forgeDir, blueprint.filename), blueprint.content);
-    fs.writeFileSync(path.join(forgeDir, 'README.md'), blueprint.readmes);
-    fs.writeFileSync(path.join(forgeDir, 'manifest.json'), JSON.stringify({
-        project_name: "Void Metal Generated Project",
-        version: "S-1792.1",
-        engine: "AZRAEL-SYNTHESIS",
-        timestamp: new Date().toISOString()
-    }, null, 2));
+    const filePath = path.join(forgeDir, filename);
+    fs.writeFileSync(filePath, blueprint.content);
+    fs.writeFileSync(path.join(forgeDir, 'README.md'), blueprint.readmes || 'Synthesized by AZRAEL.');
 
-    sendUpdate({ log: 'SEALING PAYLOAD...', status: 'sealing' });
+    console.log(`[AZRAEL] ASSET_FORGED: ${filePath} | TYPE: ${type}`);
 
-    // 3. Zip files
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
-
-    output.on('close', () => {
-      sendUpdate({ 
-        log: 'SYNTHESIS COMPLETE. DOWNLOAD READY.', 
+    res.json({ 
+        log: `SYNTHESIS COMPLETE. ${type.toUpperCase()} READY.`, 
         status: 'complete',
-        zipUrl: `/api/download/${sessionId}` 
-      });
-      res.end();
+        downloadUrl: `/api/download/${sessionId}/${filename}` 
     });
 
-    archive.on('error', (err) => { throw err; });
-    archive.pipe(output);
-    archive.directory(forgeDir, false);
-    archive.finalize();
-
   } catch (err: any) {
-    console.error("SYNTHESIS_FAILURE:", err);
-    sendUpdate({ log: `SYSTEM FAILURE: ${err.message}`, status: 'error' });
-    res.end();
+    console.error("[AZRAEL] FORGE_FAILURE:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: `SYSTEM FAILURE: ${err.message}` });
+    }
   }
 };
 
 export const handleDownload = (req: Request, res: Response) => {
-    const { sessionId } = req.params;
-    const zipPath = path.join('/tmp', 'forge', `${sessionId}.zip`);
+    const { sessionId, filename } = req.params;
+    const filePath = path.join('/tmp', 'forge', sessionId, filename);
     
-    if (fs.existsSync(zipPath)) {
-        res.download(zipPath, 'SYTHESIS_PAYLOAD.zip');
+    console.log(`[AZRAEL] DOWNLOAD_REQUEST: ${sessionId}/${filename} | Path: ${filePath}`);
+
+    if (fs.existsSync(filePath)) {
+        // Set content types for special assets
+        if (filename.endsWith('.apk')) {
+            res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+        } else if (['.jpg', '.png', '.gif', '.webp'].some(ext => filename.toLowerCase().endsWith(ext))) {
+            res.setHeader('Content-Type', 'image/jpeg');
+        } else if (filename.endsWith('.mp4')) {
+            res.setHeader('Content-Type', 'video/mp4');
+        } else {
+            res.setHeader('Content-Type', 'application/octet-stream');
+        }
+
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
     } else {
-        res.status(404).send('Payload not found or expired.');
+        console.warn(`[AZRAEL] DOWNLOAD_FAILED: Artifact ${sessionId}/${filename} not found.`);
+        res.status(404).send('Artifact not found or expired.');
     }
 };

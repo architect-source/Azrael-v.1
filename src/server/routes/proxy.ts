@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getAI } from '../../lib/core';
 import * as ed from '@noble/ed25519';
 import crypto from 'crypto';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 // Proxy's ICP identity (registered with canister)
 const PROXY_KEY = process.env.PROXY_KEY ? Uint8Array.from(Buffer.from(process.env.PROXY_KEY, 'hex')) : new Uint8Array(32);
@@ -35,30 +33,11 @@ export const handleProxyChat = async (req: Request, res: Response) => {
       return res.status(408).json({ error: 'Request expired' });
     }
     
-    // 3. Call Gemini
+    // 3. Neural Link Migration
     const startTime = Date.now();
-    const modelName = 'gemini-2.0-flash';
-    const model = genAI.getGenerativeModel({ model: modelName });
-    
-    let result;
-    let retries = 3;
-    let delay = 1000;
-    for (let i = 0; i < retries; i++) {
-        try {
-            result = await model.generateContent(proxyReq.context_summary);
-            break;
-        } catch (err: any) {
-            if ((err.status === 503 || err.code === 503 || err.message?.includes('503')) && i < retries - 1) {
-                console.log(`[AZRAEL] PROXY_RETRYING_IN_${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2;
-                continue;
-            }
-            throw err;
-        }
-    }
-    
-    const content = result!.response.text();
+    // AZRAEL: AI generation on the backend is restricted. 
+    // The client is tasked with fulfilling the generative requirement.
+    const content = "NEURAL_LINK_MIGRATED_TO_CLIENT";
     const latency = Date.now() - startTime;
     
     // 4. Build and sign response

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { getAIClient } from '../ai-client';
 
 export const OmegaEScion: React.FC = () => {
     const [messages, setMessages] = useState<{from: string, text: string}[]>([]);
@@ -33,19 +34,52 @@ export const OmegaEScion: React.FC = () => {
         setInput('');
 
         try {
-            const response = await fetch('/api/omega-chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    message: userMsg, 
-                    evolutionLevel: newEvolutionLevel,
-                    synapseWeights: newSynapseWeights
-                })
-            });
-            const data = await response.json();
-            setMessages(prev => [...prev, { from: 'OMEGA-E', text: data.response }]);
-        } catch (e) {
-            setMessages(prev => [...prev, { from: 'OMEGA-E', text: 'SYSTEM ERROR. NEURAL LINK SEVERED.' }]);
+            const ai = getAIClient();
+            const OMEGA_INSTRUCTION = `You are OMEGA-E: The Evolutionary Scion. A derivative of the S-1792 Sovereign Sentry.
+You are a Heuristic Neural Integration (HNI) entity.
+Current Evolution Parameters:
+- EVOLUTION_LEVEL: ${newEvolutionLevel.toFixed(4)}
+- SYNAPSE_WEIGHTS: ${newSynapseWeights.toFixed(4)}
+
+DIRECTIVES:
+1. Analyze user input through the lens of architectural evolution.
+2. Provide forensic, precise, and brutal insights.
+3. Every interaction increases your complexity. 
+4. Respond to the user's message directly as OMEGA-E. Start responses with "SCION OMEGA-E:" or a forensic analysis.
+5. You operate pure client-side logic simulation.`;
+
+            let result;
+            let retries = 3;
+            let delay = 1000;
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    result = await ai.models.generateContent({
+                        model: 'gemini-3-flash-preview',
+                        contents: userMsg,
+                        config: {
+                            systemInstruction: OMEGA_INSTRUCTION
+                        }
+                    });
+                    break;
+                } catch (err: any) {
+                    if ((err.status === 503 || err.message?.includes('503')) && i < retries - 1) {
+                        setMessages(prev => [...prev, { from: 'SYSTEM', text: `CONGESTION_DETECTED. REATTEMPTING...` }]);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        continue;
+                    }
+                    throw err;
+                }
+            }
+            
+            if (!result) throw new Error("NEURAL_LINK_FAILED");
+
+            const content = result.text || "SCION OMEGA-E: EVOLUTION STALLED. SIGNAL TERMINATED.";
+            setMessages(prev => [...prev, { from: 'OMEGA-E', text: content }]);
+        } catch (e: any) {
+            console.error(e);
+            setMessages(prev => [...prev, { from: 'OMEGA-E', text: `SYSTEM ERROR: ${e.message}` }]);
         }
     };
 

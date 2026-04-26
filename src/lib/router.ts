@@ -82,6 +82,6 @@ router.post("/chat", handleChat);
 router.post("/proxy-chat", handleProxyChat);
 router.post("/omega-chat", handleOmegaChat);
 router.post("/synthesize", handleSynthesize);
-router.get("/download/:sessionId", handleDownload);
+router.get("/download/:sessionId/:filename", handleDownload);
 
 export default router;
