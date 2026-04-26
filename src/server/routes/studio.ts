@@ -1,14 +1,13 @@
 import { Request, Response } from 'express';
-import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { initiateIngress } from '../lib/ingress';
 
 export const handleSynthesize = async (req: Request, res: Response) => {
   const { blueprint } = req.body;
   const sessionId = uuidv4();
   const forgeDir = path.join('/tmp', 'forge', sessionId);
-  const zipPath = path.join('/tmp', 'forge', `${sessionId}.zip`);
   
   if (!blueprint || !blueprint.content) {
     return res.status(400).json({ error: "ARCHITECTURAL_VOID: Incomplete blueprint." });
@@ -27,13 +26,21 @@ export const handleSynthesize = async (req: Request, res: Response) => {
     }
 
     const filePath = path.join(forgeDir, filename);
-    fs.writeFileSync(filePath, blueprint.content);
+    
+    // Vortex-Stream Ingress Check
+    if (blueprint.content.startsWith('http')) {
+        console.log(`[AZRAEL] INGRESS_INITIATED for remote asset: ${blueprint.content}`);
+        await initiateIngress(blueprint.content, filePath);
+    } else {
+        fs.writeFileSync(filePath, blueprint.content);
+    }
+
     fs.writeFileSync(path.join(forgeDir, 'README.md'), blueprint.readmes || 'Synthesized by AZRAEL.');
 
     console.log(`[AZRAEL] ASSET_FORGED: ${filePath} | TYPE: ${type}`);
 
     res.json({ 
-        log: `SYNTHESIS COMPLETE. ${type.toUpperCase()} READY.`, 
+        log: `SYNTHESIS_COMPLETE. ${type.toUpperCase()}_READY.`, 
         status: 'complete',
         downloadUrl: `/api/download/${sessionId}/${filename}` 
     });
@@ -41,7 +48,7 @@ export const handleSynthesize = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[AZRAEL] FORGE_FAILURE:", err);
     if (!res.headersSent) {
-      res.status(500).json({ error: `SYSTEM FAILURE: ${err.message}` });
+      res.status(500).json({ error: `SYSTEM_FAILURE: ${err.message}` });
     }
   }
 };

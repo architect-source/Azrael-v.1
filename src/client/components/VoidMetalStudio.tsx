@@ -84,6 +84,7 @@ Output as a JSON object:
 
             // 2. Send to backend for Packaging
             addLog("TRANSMITTING TO THE FORGE...");
+            setStatus('sealing');
             const response = await fetch('/api/synthesize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -163,12 +164,13 @@ Output as a JSON object:
                         </h3>
                         <div className="flex-1 overflow-y-auto font-mono text-[10px] space-y-1 pr-2">
                             {logs.map((log, i) => (
-                                <div key={i} className={log.includes('FAILURE') ? 'text-red-500' : 'text-gray-400'}>
+                                <div key={i} className={log.includes('FAILURE') ? 'text-red-500' : log.includes('SUCCESS') ? 'text-green-500' : 'text-gray-400'}>
                                     {log}
                                 </div>
                             ))}
-                            {status === 'analyzing' && <div className="text-red-500 animate-pulse">ANALYZING INTENT...</div>}
-                            {status === 'forging' && <div className="text-red-500 animate-pulse">IGNITING THE FORGE...</div>}
+                            {status === 'analyzing' && <div className="text-red-500 animate-pulse">ANALYZING_INTENT_STREAM...</div>}
+                            {status === 'forging' && <div className="text-red-500 animate-pulse">HEATING_CORE_S-1792...</div>}
+                            {status === 'sealing' && <div className="text-red-500 animate-pulse">SEALING_PAYLOAD_HASH...</div>}
                         </div>
                     </div>
                 </div>
@@ -179,26 +181,33 @@ Output as a JSON object:
                         {payloadUrl ? (
                             <motion.div
                                 key="payload"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="bg-red-900/10 border border-red-900 p-8 text-center space-y-6"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-red-900/10 border border-red-900 p-8 text-center space-y-6 relative"
                             >
-                                <div className="inline-block p-4 bg-red-900/20 rounded-full border border-red-900">
+                                <div className="absolute top-2 right-2">
+                                    <div className="flex gap-1">
+                                        <div className="w-1 h-3 bg-red-500"></div>
+                                        <div className="w-1 h-3 bg-red-900"></div>
+                                        <div className="w-1 h-3 bg-red-500"></div>
+                                    </div>
+                                </div>
+                                <div className="inline-block p-4 bg-red-900/20 rounded-full border border-red-900 shadow-[0_0_20px_rgba(153,27,27,0.3)]">
                                     <Package className="w-12 h-12 text-red-500" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-red-500 uppercase tracking-widest">Synthesis Payload Sealed</h2>
-                                    <p className="text-xs text-gray-500 mt-2 uppercase tracking-tighter">Download the raw architectural data for deployment.</p>
+                                    <h2 className="text-xl font-bold text-red-500 uppercase tracking-widest">Payload Integrity Verified</h2>
+                                    <p className="text-xs text-gray-500 mt-2 uppercase tracking-tighter">S-1792 VORTEX-STREAM INGRESS COMPLETED SUCCESSFULLY.</p>
                                 </div>
                                 <a
                                     href={payloadUrl}
                                     download={payloadUrl.split('/').pop() || 'AZRAEL_PAYLOAD'}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-400 text-black px-8 py-3 font-bold uppercase tracking-widest text-sm transition-all"
+                                    onClick={() => addLog("INITIATING_LOCAL_TRANSFER...")}
+                                    className="inline-flex items-center gap-2 bg-red-500 hover:bg-red-400 text-black px-10 py-4 font-black uppercase tracking-widest text-sm transition-all shadow-[0_5px_0_rgb(153,27,27)] active:translate-y-1 active:shadow-none"
                                 >
-                                    <Download className="w-4 h-4" /> {payloadUrl.endsWith('.apk') ? 'Download APK' : 'Download File'}
+                                    <Download className="w-4 h-4" /> {payloadUrl.endsWith('.apk') ? 'Retrieve APK' : 'Retrieve Data'}
                                 </a>
                             </motion.div>
                         ) : (
