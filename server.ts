@@ -6,6 +6,7 @@ import fs from "fs";
 import cors from "cors";
 import router from "./src/lib/router";
 import { getAI, SYSTEM_INSTRUCTION } from "./src/lib/core";
+import { reaper } from "./src/server/reaper";
 
 import { getSovereignDb } from "./src/lib/firebase-admin";
 
@@ -58,11 +59,13 @@ function setupBot(botInstance: Telegraf) {
       if (isScam || isBot) {
         try {
           logBreach(ctx);
+          reaper.report('breach', { ip: userId, action: 'ban_and_delete' });
           await ctx.banChatMember(userId!);
           await ctx.deleteMessage();
           await botInstance.telegram.sendMessage(ARCHITECT_ID, `⚡ AZRAEL: SCAMMER PURGED. ID: ${userId} | @${ctx.from?.username || "anon"}`);
           return;
         } catch (e) {
+          reaper.report('error', { error: 'PURGE_FAILURE', stack: e });
           console.error("PURGE_FAILURE:", e);
         }
       }
