@@ -4,6 +4,7 @@ import path from "path";
 import { getAI, SYSTEM_INSTRUCTION } from "./core";
 import { handleChat } from "../server/routes/chat";
 import { handleProxyChat } from "../server/routes/proxy";
+import { handleOmegaChat } from "../server/routes/omega";
 import { icpAgent } from "../server/icp";
 
 import { getSovereignDb } from "./firebase-admin";
@@ -78,5 +79,6 @@ router.post("/session", async (req, res) => {
 
 router.post("/chat", handleChat);
 router.post("/proxy-chat", handleProxyChat);
+router.post("/omega-chat", handleOmegaChat);
 
 export default router;

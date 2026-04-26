@@ -40,8 +40,25 @@ export const handleProxyChat = async (req: Request, res: Response) => {
     const modelName = 'gemini-2.0-flash';
     const model = genAI.getGenerativeModel({ model: modelName });
     
-    const result = await model.generateContent(proxyReq.context_summary);
-    const content = result.response.text();
+    let result;
+    let retries = 3;
+    let delay = 1000;
+    for (let i = 0; i < retries; i++) {
+        try {
+            result = await model.generateContent(proxyReq.context_summary);
+            break;
+        } catch (err: any) {
+            if ((err.status === 503 || err.code === 503 || err.message?.includes('503')) && i < retries - 1) {
+                console.log(`[AZRAEL] PROXY_RETRYING_IN_${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+                continue;
+            }
+            throw err;
+        }
+    }
+    
+    const content = result!.response.text();
     const latency = Date.now() - startTime;
     
     // 4. Build and sign response
