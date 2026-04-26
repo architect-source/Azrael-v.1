@@ -22,19 +22,38 @@ export function getAIClient() {
   return ai;
 }
 
-export async function generateAzraelResponse(message: string) {
-  try {
-    const ai = getAIClient();
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: message,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION
+export async function generateAzraelResponse(message: string, retries = 3, delayMs = 1000): Promise<string> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const ai = getAIClient();
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: message,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION
+        }
+      });
+      return response.text || "The void is silent.";
+    } catch (err: any) {
+      lastError = err;
+      const errorMsg = err.message || JSON.stringify(err);
+      console.error(`[AZRAEL_CLIENT] AI_GENERATE_FAILURE (Attempt ${attempt + 1}/${retries}):\n${errorMsg}`);
+      
+      if (err.status === 503 || err.code === 503 || errorMsg.includes('503') || errorMsg.includes('UNAVAILABLE')) {
+        if (attempt < retries - 1) {
+          console.log(`[AZRAEL_CLIENT] RETRYING_IN_${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          delayMs *= 2;
+          continue;
+        }
+      } else {
+        break; // Don't retry for non-503 errors
       }
-    });
-    return response.text || "The void is silent.";
-  } catch (err: any) {
-    console.error("[AZRAEL_CLIENT] AI_GENERATE_FAILURE:", err.message);
-    return "AZRAEL: THE VOID IS TURBULENT. I CANNOT ECHO YOUR WHISPER AT THIS MOMENT.";
+    }
   }
+  
+  console.error(`[AZRAEL_CLIENT] AI_GENERATE_FATAL_FAILURE:\n${lastError?.message || JSON.stringify(lastError)}`);
+  return "AZRAEL: THE VOID IS TURBULENT. I CANNOT ECHO YOUR WHISPER AT THIS MOMENT.";
 }
