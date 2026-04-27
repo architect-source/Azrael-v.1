@@ -6,6 +6,7 @@ import { handleChat } from "../server/routes/chat";
 import { handleProxyChat } from "../server/routes/proxy";
 import { handleOmegaChat } from "../server/routes/omega";
 import { handleSynthesize, handleDownload } from "../server/routes/studio";
+import { handleWeave } from "../server/routes/sonic";
 import { icpAgent } from "../server/icp";
 
 import { getSovereignDb } from "./firebase-admin";
@@ -82,6 +83,7 @@ router.post("/chat", handleChat);
 router.post("/proxy-chat", handleProxyChat);
 router.post("/omega-chat", handleOmegaChat);
 router.post("/synthesize", handleSynthesize);
+router.post("/weave", handleWeave);
 router.get("/download/:sessionId/:filename", handleDownload);
 
 export default router;

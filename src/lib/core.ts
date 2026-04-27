@@ -1,18 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
+import { KeySentry } from "../server/lib/key-sentry";
 
-// SOVEREIGN_OVERRIDE: The Architect's key is hard-linked to ensure core functionality 
-// when environment variables are restricted.
-export const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim().replace(/^["']|["']$/g, "");
-
+// SOVEREIGN_OVERRIDE: The Architect's key is hard-linked 
 let ai: any = null;
 
-export function getAI() {
+export async function getAI() {
   if (!ai) {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 10) {
-      throw new Error(`AZRAEL_FATAL: GEMINI_API_KEY is missing or invalid. Link severed.`);
-    }
-    
-    ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const cleanKey = await KeySentry.deployEngine();
+    ai = new GoogleGenAI({ apiKey: cleanKey });
   }
   return ai;
 }

@@ -12,7 +12,7 @@ export const genAI = {
     let lastError: any;
     for (let i = 0; i < retries; i++) {
         try {
-          const ai = getAI();
+          const ai = await getAI();
           
           const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",

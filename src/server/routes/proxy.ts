@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { getAI } from '../../lib/core';
 import * as ed from '@noble/ed25519';
 import crypto from 'crypto';
 

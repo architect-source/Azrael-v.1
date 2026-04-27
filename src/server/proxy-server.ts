@@ -48,7 +48,7 @@ app.post('/api/proxy-chat', async (req, res) => {
     
     // 3. Call Gemini
     const startTime = Date.now();
-    const ai = getAI();
+    const ai = await getAI();
     
     const result = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
