@@ -6,6 +6,10 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --color-zinc-950: #09090b;
+
+  --grid-template-columns-20: repeat(20, minmax(0, 1fr));
+  --grid-template-columns-25: repeat(25, minmax(0, 1fr));
+  --grid-template-columns-50: repeat(50, minmax(0, 1fr));
 }
 
 @layer base {
