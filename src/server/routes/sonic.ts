@@ -49,7 +49,21 @@ SCHEMA:
             }
         });
 
-        const blueprint: MusicBlueprint = JSON.parse(result.text || '{}');
+        // Clean output in case model includes Markdown boxes or trailing text
+        let cleanText = result.text || '{}';
+        if (cleanText.includes('```json')) {
+            cleanText = cleanText.split('```json')[1].split('```')[0].trim();
+        } else if (cleanText.includes('```')) {
+            cleanText = cleanText.split('```')[1].split('```')[0].trim();
+        }
+        
+        // Remove trailing non-JSON noise if present (matches Error 1)
+        const lastBrace = cleanText.lastIndexOf('}');
+        if (lastBrace !== -1 && lastBrace < cleanText.length - 1) {
+            cleanText = cleanText.substring(0, lastBrace + 1);
+        }
+
+        const blueprint: MusicBlueprint = JSON.parse(cleanText);
 
         console.log(`[AZRAEL] SONIC_SIPHON_COMPLETE: ${blueprint.genre} @ ${blueprint.tempo_bpm}BPM`);
 

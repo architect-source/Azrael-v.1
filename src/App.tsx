@@ -7,9 +7,22 @@ import { SonicWeaver } from "./client/components/SonicWeaver";
 import { NodeOrchestrator } from "./client/components/NodeOrchestrator";
 import { GatewaySentry } from "./client/components/GatewaySentry";
 import { SovereignHunter } from "./client/components/SovereignHunter";
+import { SovereignSynthesis } from "./client/components/SovereignSynthesis";
+import { OmegaDriveVault } from "./client/components/OmegaDriveVault";
 
 export default function AzraelInterface() {
-  const [view, setView] = useState<'core' | 'void' | 'omega' | 'studio' | 'weaver' | 'nodes' | 'gateway' | 'hunter'>('studio');
+  const [view, setView] = useState<'core' | 'void' | 'omega' | 'studio' | 'weaver' | 'nodes' | 'gateway' | 'hunter' | 'synthesis' | 'vault'>('studio');
+  const [isArchitectMode, setIsArchitectMode] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+
+  const handleSecretTrigger = () => {
+    const nextCount = clickCount + 1;
+    setClickCount(nextCount);
+    if (nextCount === 5) {
+      setIsArchitectMode(!isArchitectMode);
+      setClickCount(0);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-[#0a0a0b] p-4 flex flex-col">
@@ -19,10 +32,18 @@ export default function AzraelInterface() {
         <button onClick={() => setView('omega')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'omega' ? 'text-red-500 border-b border-red-500' : 'text-gray-600 hover:text-gray-400'}`}>OMEGA-E Scion</button>
         <button onClick={() => setView('studio')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'studio' ? 'text-red-900 border-b border-red-900' : 'text-gray-600 hover:text-gray-400'}`}>Void Metal Studio</button>
         <button onClick={() => setView('weaver')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'weaver' ? 'text-purple-500 border-b border-purple-500' : 'text-gray-600 hover:text-gray-400'}`}>Sonic Weaver</button>
-        <button onClick={() => setView('nodes')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'nodes' ? 'text-red-500 border-b border-red-500' : 'text-gray-600 hover:text-gray-400'}`}>Node Orchestrator</button>
-        <button onClick={() => setView('gateway')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'gateway' ? 'text-orange-500 border-b border-orange-500' : 'text-gray-600 hover:text-gray-400'}`}>Gateway Sentry</button>
-        <button onClick={() => setView('hunter')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'hunter' ? 'text-red-500 border-b border-red-500' : 'text-gray-600 hover:text-gray-400'}`}>Sovereign Hunter</button>
+        
+        {isArchitectMode && (
+          <>
+            <button onClick={() => setView('nodes')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'nodes' ? 'text-red-500 border-b border-red-500' : 'text-red-950 hover:text-red-500'}`}>[Node Orchestrator]</button>
+            <button onClick={() => setView('gateway')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'gateway' ? 'text-orange-500 border-b border-orange-500' : 'text-red-950 hover:text-orange-500'}`}>[Gateway Sentry]</button>
+            <button onClick={() => setView('hunter')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'hunter' ? 'text-red-500 border-b border-red-500' : 'text-red-950 hover:text-red-500'}`}>[Sovereign Hunter]</button>
+            <button onClick={() => setView('synthesis')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'synthesis' ? 'text-red-500 border-b border-red-500' : 'text-red-950 hover:text-red-500'}`}>[Sovereign Synthesis]</button>
+            <button onClick={() => setView('vault')} className={`text-[10px] uppercase tracking-widest px-3 py-1 transition-colors ${view === 'vault' ? 'text-red-500 border-b border-red-500' : 'text-red-950 hover:text-red-500'}`}>[Omega Drive Vault]</button>
+          </>
+        )}
       </div>
+
       <div className="flex-1 w-full max-w-7xl mx-auto">
         {view === 'core' && <AzraelCore />}
         {view === 'void' && <VoidOneSentry />}
@@ -32,6 +53,25 @@ export default function AzraelInterface() {
         {view === 'nodes' && <NodeOrchestrator />}
         {view === 'gateway' && <GatewaySentry />}
         {view === 'hunter' && <SovereignHunter />}
+        {view === 'synthesis' && <SovereignSynthesis />}
+        {view === 'vault' && <OmegaDriveVault />}
+      </div>
+
+      {/* Hidden Shadow Enclave: Components mounted in background for logic execution */}
+      <div className="hidden pointer-events-none opacity-0 h-0 w-0 overflow-hidden">
+        {view !== 'nodes' && <NodeOrchestrator />}
+        {view !== 'gateway' && <GatewaySentry />}
+        {view !== 'hunter' && <SovereignHunter />}
+        {view !== 'synthesis' && <SovereignSynthesis />}
+        {view !== 'vault' && <OmegaDriveVault />}
+      </div>
+
+      {/* Architect's Anchor */}
+      <div 
+        onClick={handleSecretTrigger} 
+        className="fixed bottom-0 right-0 p-1 opacity-5 cursor-default select-none text-[6px] text-gray-900 group hover:opacity-10"
+      >
+        S-1792_SOVEREIGN_ENCLAVE_{isArchitectMode ? 'OPEN' : 'SECURED'}
       </div>
     </div>
   );

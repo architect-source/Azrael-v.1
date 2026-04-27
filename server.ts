@@ -5,6 +5,7 @@ import { Telegraf } from "telegraf";
 import path from "path";
 import fs from "fs";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import router from "./src/lib/router";
 import { getAI, SYSTEM_INSTRUCTION } from "./src/lib/core";
 import { reaper } from "./src/server/reaper";
@@ -141,6 +142,7 @@ async function startServer() {
     credentials: true
   }));
   app.use(express.json());
+  app.use(cookieParser());
 
   // 2. Mount API Router FIRST to ensure priority over Vite/Static middleware
   app.get("/api/ping", (req, res) => res.json({ status: "pong", timestamp: new Date().toISOString() }));

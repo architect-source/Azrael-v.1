@@ -68,7 +68,22 @@ Output as a JSON object:
 
             let blueprint;
             try {
-                const textOutput = result.text || "{}";
+                let textOutput = result.text || "{}";
+                
+                // Clean output in case model includes Markdown boxes or trailing noise
+                if (textOutput.includes('```json')) {
+                    textOutput = textOutput.split('```json')[1].split('```')[0].trim();
+                } else if (textOutput.includes('```')) {
+                    textOutput = textOutput.split('```')[1].split('```')[0].trim();
+                }
+                
+                // Final sanitize: find the start and end of the JSON object
+                const start = textOutput.indexOf('{');
+                const end = textOutput.lastIndexOf('}');
+                if (start !== -1 && end !== -1) {
+                    textOutput = textOutput.substring(start, end + 1);
+                }
+
                 blueprint = JSON.parse(textOutput);
             } catch (e) {
                 console.error("JSON_PARSE_FAILURE:", e);

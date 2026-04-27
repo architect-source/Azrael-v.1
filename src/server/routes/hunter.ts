@@ -13,8 +13,8 @@ const parser = new Parser({
     }
 });
 
-const DEFAULT_FEED = "https://www.upwork.com/ab/feed/jobs/rss?q=data+cleansing";
-const DEFAULT_KEYWORDS = ["data cleansing", "CSV repair", "Python automation", "Excel formatting", "scraping", "automation"];
+const DEFAULT_FEED = "https://weworkremotely.com/categories/remote-data-science-jobs.rss/"; // Added trailing slash to prevent 301
+const DEFAULT_KEYWORDS = ["data", "cleansing", "repair", "automation", "excel", "scraping", "python"];
 
 // In-memory cache for persistence within the current session
 const detectedHashes = new Set<string>();
@@ -66,9 +66,19 @@ export const handleHunt = async (req: Request, res: Response) => {
 
     } catch (err: any) {
         console.error(`[AZRAEL] HUNT_SEQUENCE_FAILED: ${err.message}`);
+        
+        let errorMsg = err.message;
+        if (err.message.includes('410')) {
+            errorMsg = "PROTOCOL_RETIRED: The targeted vector has been permanently neutralized (Status 410). Switching to backup relays required.";
+        } else if (err.message.includes('403')) {
+            errorMsg = "TARGET_HARDENED: Access denied by perimeter defense (Status 403). Rotation initiated.";
+        } else if (err.message.includes('301')) {
+            errorMsg = "VECTOR_SHIFT: The target has moved (Status 301). Update manual URL or apply trailing-slash corrections.";
+        }
+
         res.status(500).json({
             error: "HUNT_SEQUENCE_FAILURE",
-            message: err.message
+            message: errorMsg
         });
     }
 };

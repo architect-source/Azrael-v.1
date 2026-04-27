@@ -10,6 +10,8 @@ import { handleWeave } from "../server/routes/sonic";
 import { handleNodeTelemetry } from "../server/routes/nodes";
 import { handleHandshake, conduitGuard, handleSecureData } from "../server/routes/conduit";
 import { handleHunt } from "../server/routes/hunter";
+import { handleSovereignSynthesis } from "../server/routes/synthesis";
+import { handleDriveAuthUrl, handleDriveCallback, handleDriveUpload, handleDriveStatus } from "../server/routes/drive";
 import { icpAgent } from "../server/icp";
 
 import { getSovereignDb } from "./firebase-admin";
@@ -95,6 +97,15 @@ router.get("/conduit/:hash/secure-data", conduitGuard, handleSecureData);
 
 // SOVEREIGN HUNTER
 router.get("/hunt", handleHunt);
+
+// SOVEREIGN SYNTHESIS
+router.post("/sovereign-synthesize", handleSovereignSynthesis);
+
+// OMEGA DRIVE VAULT
+router.get("/auth/google/url", handleDriveAuthUrl);
+router.get(["/auth/callback", "/auth/callback/"], handleDriveCallback);
+router.get("/drive/status", handleDriveStatus);
+router.post("/drive/upload", handleDriveUpload);
 
 router.get("/download/:sessionId/:filename", handleDownload);
 
