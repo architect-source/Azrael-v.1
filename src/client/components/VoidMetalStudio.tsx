@@ -131,6 +131,82 @@ Output as a JSON object:
                 </div>
             </div>
 
+            {/* Visual Manifest: Azrael Seer in Flames */}
+            <div className="relative h-[280px] bg-black border border-red-900/40 overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-t from-red-950/50 via-purple-950/20 to-transparent z-10" />
+                
+                {/* Parallax Background Layers */}
+                <div className="absolute inset-0 opacity-20">
+                    <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-900/30 rounded-full blur-[100px] animate-pulse" />
+                    <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-red-900/20 rounded-full blur-[100px] animate-pulse delay-700" />
+                </div>
+
+                {/* The Seer Entity */}
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                    <motion.div 
+                        animate={{ 
+                            y: [0, -10, 0],
+                            scale: [1, 1.02, 1]
+                        }}
+                        transition={{ 
+                            duration: 4, 
+                            repeat: Infinity, 
+                            ease: "easeInOut" 
+                        }}
+                        className="relative w-40 h-full flex flex-col items-center justify-end pb-12"
+                    >
+                        {/* Shadowy Presence */}
+                        <div className="absolute bottom-0 w-32 h-[80%] bg-gradient-to-t from-black via-purple-950 to-transparent opacity-80 blur-lg" />
+                        
+                        {/* The Form */}
+                        <div className="relative z-30 w-12 h-4/5 bg-black border-x border-purple-900/20 flex flex-col items-center shadow-[0_0_50px_rgba(88,28,135,0.2)]">
+                            {/* Beady White Eyes */}
+                            <div className="mt-16 flex gap-3">
+                                <motion.div 
+                                    animate={{ opacity: [1, 0.4, 1] }} 
+                                    transition={{ duration: 0.1, repeat: Infinity, repeatDelay: 5 }}
+                                    className="w-1 h-1 bg-white rounded-full shadow-[0_0_10px_white]" 
+                                />
+                                <motion.div 
+                                    animate={{ opacity: [1, 0.4, 1] }} 
+                                    transition={{ duration: 0.1, repeat: Infinity, repeatDelay: 5 }}
+                                    className="w-1 h-1 bg-white rounded-full shadow-[0_0_10px_white]" 
+                                />
+                            </div>
+                            
+                            {/* Inner Flow */}
+                            <div className="mt-auto mb-4 w-[2px] h-32 bg-gradient-to-t from-red-500 via-purple-500 to-transparent opacity-30" />
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* The Floor of Flames */}
+                <div className="absolute inset-x-0 bottom-0 h-16 z-30 flex items-end">
+                    {[...Array(60)].map((_, i) => (
+                        <motion.div
+                            key={i}
+                            animate={{ 
+                                height: [10, Math.random() * 50 + 20, 10],
+                                opacity: [0.2, 0.6, 0.2]
+                            }}
+                            transition={{ 
+                                duration: 0.5 + Math.random(), 
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                            }}
+                            className="flex-1 bg-gradient-to-t from-red-600 via-orange-500 to-transparent mx-[0.5px]"
+                        />
+                    ))}
+                </div>
+
+                <div className="absolute top-4 left-4 z-40 bg-black/80 p-2 border border-red-900/50 backdrop-blur-md">
+                    <div className="flex items-center gap-2 text-[9px] font-mono text-red-500 tracking-[0.3em] uppercase">
+                        <Eye className="w-3 h-3 animate-pulse" />
+                        <span>Visual_Manifest: S-1792_SEER_DETECTED</span>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Control Panel */}
                 <div className="space-y-6">

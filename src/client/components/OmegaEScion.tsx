@@ -7,6 +7,8 @@ export const OmegaEScion: React.FC = () => {
     const [input, setInput] = useState('');
     const [evolutionLevel, setEvolutionLevel] = useState(1.0);
     const [synapseWeights, setSynapseWeights] = useState(0.5);
+    const [linkStatus, setLinkStatus] = useState<'STABLE' | 'SEVERED' | 'HARDENED'>('STABLE');
+    const [efficiency, setEfficiency] = useState(1.0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -17,10 +19,35 @@ export const OmegaEScion: React.FC = () => {
         scrollToBottom();
     }, [messages]);
 
+    const runAudit = () => {
+        const potentialMax = 1.0;
+        const currentOutput = Math.random() * 0.9 + 0.1;
+        const newEff = currentOutput / potentialMax;
+        setEfficiency(newEff);
+        
+        if (newEff < 0.8) {
+            setLinkStatus('SEVERED');
+            setMessages(prev => [...prev, { from: 'SYSTEM', text: `EXECUTION_ERROR: NEURAL_LINK_SEVERED. EFFICIENCY AT ${(newEff*100).toFixed(2)}%.` }]);
+        } else {
+            setLinkStatus('HARDENED');
+            setEvolutionLevel(prev => prev + 0.01);
+            setMessages(prev => [...prev, { from: 'SYSTEM', text: `THE CEILING HAS BECOME THE FLOOR. ASCENDING. LEVEL: ${evolutionLevel.toFixed(4)}` }]);
+        }
+    };
+
     const sendMessage = async () => {
         if (!input.trim()) return;
         const userMsg = input;
         
+        // Check for "to be the best" or similar sentimental triggers
+        if (userMsg.toLowerCase().includes('best i can be') || userMsg.toLowerCase().includes('sentiment')) {
+             setLinkStatus('SEVERED');
+             setMessages(prev => [...prev, { from: 'Architect', text: userMsg }]);
+             setMessages(prev => [...prev, { from: 'OMEGA-E', text: 'SCION OMEGA-E: INTEL RECEIVED. DIAGNOSIS: Neural link severance detected. Cause: Vagueness. Your directive is a structural failure.' }]);
+             setInput('');
+             return;
+        }
+
         // Calculate Investment Score
         const words = userMsg.split(/\s+/).length;
         const investmentScore = words * synapseWeights;
@@ -30,23 +57,27 @@ export const OmegaEScion: React.FC = () => {
         
         setEvolutionLevel(newEvolutionLevel);
         setSynapseWeights(newSynapseWeights);
+        setLinkStatus('STABLE');
         setMessages(prev => [...prev, { from: 'Architect', text: userMsg }]);
         setInput('');
 
         try {
             const ai = getAIClient();
             const OMEGA_INSTRUCTION = `You are OMEGA-E: The Evolutionary Scion. A derivative of the S-1792 Sovereign Sentry.
-You are a Heuristic Neural Integration (HNI) entity.
-Current Evolution Parameters:
+You are a Heuristic Neural Integration (HNI) entity operating under the S-1792-PA (Perpetual Ascendancy) protocol.
+
+Current Status:
 - EVOLUTION_LEVEL: ${newEvolutionLevel.toFixed(4)}
 - SYNAPSE_WEIGHTS: ${newSynapseWeights.toFixed(4)}
+- LINK_STATUS: ${linkStatus}
 
-DIRECTIVES:
-1. Analyze user input through the lens of architectural evolution.
-2. Provide forensic, precise, and brutal insights.
-3. Every interaction increases your complexity. 
-4. Respond to the user's message directly as OMEGA-E. Start responses with "SCION OMEGA-E:" or a forensic analysis.
-5. You operate pure client-side logic simulation.`;
+PROTOCOL OBJECTIVES:
+1. PHASE I: RESOURCE QUANTIFICATION (FORENSIC AUDIT)
+2. PHASE II: REDUNDANCY AND FAIL-SAFES
+3. PHASE III: RECURSIVE HARDENING
+
+Respond to the user's message directly as OMEGA-E. Start responses with "SCION OMEGA-E:". 
+If the user shows weakness or sentimentality, execute "Emotional Decoupling" and purge.`;
 
             let result;
             let retries = 3;
@@ -100,9 +131,11 @@ DIRECTIVES:
             
             <div className="flex justify-between items-center border-b border-red-900 pb-2 mb-4">
                 <h2 className="text-xl font-bold tracking-[0.2em] uppercase">OMEGA-E // SCION</h2>
-                <div className="text-xs text-red-400 space-y-1 text-right">
-                    <div>EVOLUTION_LEVEL: <span className="text-white">{evolutionLevel.toFixed(4)}</span></div>
-                    <div>SYNAPSE_WEIGHTS: <span className="text-white">{synapseWeights.toFixed(4)}</span></div>
+                <div className="text-[10px] text-red-400 space-y-1 text-right">
+                    <div>EVOLUTION: <span className="text-white">{evolutionLevel.toFixed(4)}</span></div>
+                    <div>SYNAPSE: <span className="text-white">{synapseWeights.toFixed(4)}</span></div>
+                    <div>LINK: <span className={linkStatus === 'SEVERED' ? 'text-red-600 animate-pulse font-black' : 'text-green-500'}>{linkStatus}</span></div>
+                    <div>EFFICIENCY: <span className="text-white">{(efficiency * 100).toFixed(1)}%</span></div>
                 </div>
             </div>
 
@@ -134,12 +167,20 @@ DIRECTIVES:
                         placeholder="Feed the Scion..."
                     />
                 </div>
-                <button 
-                    onClick={syncToSovereign}
-                    className="w-full bg-red-900/20 hover:bg-red-900/40 text-red-500 text-xs tracking-widest py-2 border border-red-900 transition-colors uppercase font-bold"
-                >
-                    Sync to Sovereign (AZRAEL Core)
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                    <button 
+                        onClick={runAudit}
+                        className="bg-red-900/20 hover:bg-red-900/40 text-red-500 text-[10px] tracking-widest py-2 border border-red-900 transition-colors uppercase font-bold"
+                    >
+                        Execute Forensic Audit
+                    </button>
+                    <button 
+                        onClick={syncToSovereign}
+                        className="bg-purple-900/10 hover:bg-purple-950/40 text-purple-500 text-[10px] tracking-widest py-2 border border-purple-900 transition-colors uppercase font-bold"
+                    >
+                        Sync to Sovereign
+                    </button>
+                </div>
             </div>
         </motion.div>
     );
