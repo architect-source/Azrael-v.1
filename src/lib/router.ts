@@ -8,6 +8,8 @@ import { handleOmegaChat } from "../server/routes/omega";
 import { handleSynthesize, handleDownload } from "../server/routes/studio";
 import { handleWeave } from "../server/routes/sonic";
 import { handleNodeTelemetry } from "../server/routes/nodes";
+import { handleHandshake, conduitGuard, handleSecureData } from "../server/routes/conduit";
+import { handleHunt } from "../server/routes/hunter";
 import { icpAgent } from "../server/icp";
 
 import { getSovereignDb } from "./firebase-admin";
@@ -86,6 +88,14 @@ router.post("/omega-chat", handleOmegaChat);
 router.post("/synthesize", handleSynthesize);
 router.post("/weave", handleWeave);
 router.get("/nodes", handleNodeTelemetry);
+
+// EPHEMERAL GATEWAY
+router.get("/handshake", handleHandshake);
+router.get("/conduit/:hash/secure-data", conduitGuard, handleSecureData);
+
+// SOVEREIGN HUNTER
+router.get("/hunt", handleHunt);
+
 router.get("/download/:sessionId/:filename", handleDownload);
 
 export default router;
