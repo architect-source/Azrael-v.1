@@ -118,6 +118,39 @@
   @apply list-disc list-inside space-y-1;
 }
 
-.markdown-body strong {
-  @apply text-red-600 font-bold;
+@layer base {
+  @keyframes siphon-glow {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  @keyframes forensic-line {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  .animate-scan {
+    animation: forensic-line 4s linear infinite;
+  }
+
+  .animate-siphon {
+    animation: siphon-glow 2s infinite ease-in-out;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 2px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #2D2D2D;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #8B0000;
+  }
 }
+
