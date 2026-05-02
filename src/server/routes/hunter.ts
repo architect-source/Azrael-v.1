@@ -26,7 +26,17 @@ export const handleHunt = async (req: Request, res: Response) => {
     console.log(`[AZRAEL] SOVEREIGN_HUNTER_INITIATED | Feed: ${feedUrl}`);
 
     try {
-        const feed = await parser.parseURL(feedUrl);
+        const response = await fetch(feedUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (SovereignHunter/1.0; forensic-audit)',
+                'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP_ERROR: Status ${response.status}`);
+        }
+        const xml = await response.text();
+        const feed = await parser.parseString(xml);
         const targets: any[] = [];
 
         for (const item of feed.items) {

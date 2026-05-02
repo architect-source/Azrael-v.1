@@ -10,7 +10,8 @@ import { handleWeave } from "../server/routes/sonic";
 import { handleNodeTelemetry } from "../server/routes/nodes";
 import { handleHandshake, conduitGuard, handleSecureData } from "../server/routes/conduit";
 import { handleHunt } from "../server/routes/hunter";
-import { handleSovereignSynthesis } from "../server/routes/synthesis";
+import { handleSovereignSynthesis, handleSonicGenerate } from "../server/routes/synthesis";
+import { handleVideoStitch } from "../server/routes/video";
 import { handleDriveAuthUrl, handleDriveCallback, handleDriveUpload, handleDriveStatus } from "../server/routes/drive";
 import { icpAgent } from "../server/icp";
 
@@ -100,6 +101,8 @@ router.get("/hunt", handleHunt);
 
 // SOVEREIGN SYNTHESIS
 router.post("/sovereign-synthesize", handleSovereignSynthesis);
+router.post("/sonic-generate", handleSonicGenerate);
+router.post("/video-stitch", handleVideoStitch);
 
 // OMEGA DRIVE VAULT
 router.get("/auth/google/url", handleDriveAuthUrl);
