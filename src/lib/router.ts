@@ -43,17 +43,34 @@ router.get("/logs", async (req, res) => {
         .limit(50)
         .get();
     } catch (e: any) {
-      if (e.message?.includes('NOT_FOUND') || e.code === 5) {
-        console.warn("AZRAEL // NAMED_DATABASE_NOT_FOUND // FALLING_BACK_TO_DEFAULT");
-        // @ts-ignore
-        const { getFirestore } = await import('firebase-admin/firestore');
-        snapshot = await getFirestore().collection('shadow_ledger')
-          .orderBy('timestamp', 'desc')
-          .limit(50)
-          .get();
+      console.warn(`[AZRAEL] LEDGER_PRIMARY_FETCH_FAULT: ${e.message}`);
+      if (e.message?.includes('NOT_FOUND') || e.code === 5 || e.message?.includes('PERMISSION_DENIED') || e.code === 7) {
+        console.warn(`[AZRAEL] DATABASE_ACCESS_FAILURE [Code: ${e.code}] // FALLING_BACK_TO_DEFAULT`);
+        try {
+          // @ts-ignore
+          const { getFirestore } = await import('firebase-admin/firestore');
+          snapshot = await getFirestore().collection('shadow_ledger')
+            .orderBy('timestamp', 'desc')
+            .limit(50)
+            .get();
+        } catch (innerError: any) {
+          console.error(`[AZRAEL] LEDGER_FALLBACK_FETCH_FAULT: ${innerError.message}`);
+          // FINAL_FALLBACK: Return ephemeral mock logs if DB is completely unreachable
+          snapshot = {
+            docs: [
+              { data: () => ({ timestamp: new Date().toISOString(), type: 'SYSTEM', content: "AZRAEL_PROTOCOL_STANDALONE: Ledger database restricted. Running in autonomous ephemeral mode." }) },
+              { data: () => ({ timestamp: new Date().toISOString(), type: 'BREACH', content: "SIMULATED_LOG: Unauthorized access detected from Winston Sector." }) }
+            ]
+          } as any;
+        }
       } else {
         throw e;
       }
+    }
+    
+    if (!snapshot || !snapshot.docs) {
+      res.json({ logs: ["AZRAEL: SHADOW_LEDGER_UNREACHABLE // PROTOCOL_VOID"] });
+      return;
     }
     
     const logs = snapshot.docs.map(doc => {

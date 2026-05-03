@@ -13,10 +13,12 @@ import { OmegaDriveVault } from "./client/components/OmegaDriveVault";
 
 import { SonicVoidInterface } from "./client/components/SonicVoidInterface";
 import { SovereignVideoAsset } from "./client/components/SovereignVideoAsset";
-import { Menu, X, ChevronRight, Binary, Shield, Zap, Terminal, Database, Activity, Lock, Disc, Search, Radio, Film } from 'lucide-react';
+import { ShepherdProtocol } from "./client/components/ShepherdProtocol";
+import { SentryNodeOrchestrator } from "./client/components/SentryNodeOrchestrator";
+import { Menu, X, ChevronRight, Binary, Shield, Zap, Terminal, Database, Activity, Lock, Disc, Search, Radio, Film, Anchor, Server } from 'lucide-react';
 
 export default function AzraelInterface() {
-  const [view, setView] = useState<'core' | 'void' | 'omega' | 'studio' | 'weaver' | 'sonic-void' | 'temporal-video' | 'nodes' | 'gateway' | 'hunter' | 'synthesis' | 'vault'>('core');
+  const [view, setView] = useState<'core' | 'void' | 'omega' | 'studio' | 'weaver' | 'sonic-void' | 'temporal-video' | 'shepherd' | 'sentry-node' | 'nodes' | 'gateway' | 'hunter' | 'synthesis' | 'vault'>('core');
   const [isArchitectMode, setIsArchitectMode] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -39,6 +41,7 @@ export default function AzraelInterface() {
     { id: 'weaver', label: 'Sonic Weaver', icon: <Disc className="w-4 h-4" />, color: 'text-purple-500' },
     { id: 'sonic-void', label: 'Sonic-Void Interface', icon: <Radio className="w-4 h-4" />, color: 'text-[#8B0000]' },
     { id: 'temporal-video', label: 'Temporal Asset Core', icon: <Film className="w-4 h-4" />, color: 'text-red-600' },
+    { id: 'shepherd', label: 'Shepherd Protocol', icon: <Anchor className="w-4 h-4" />, color: 'text-[#8B0000]' },
   ];
 
   const adminItems = [
@@ -130,6 +133,8 @@ export default function AzraelInterface() {
               {view === 'weaver' && <SonicWeaver />}
               {view === 'sonic-void' && <SonicVoidInterface />}
               {view === 'temporal-video' && <SovereignVideoAsset />}
+              {view === 'shepherd' && <ShepherdProtocol />}
+              {view === 'sentry-node' && <SentryNodeOrchestrator />}
               {view === 'nodes' && <NodeOrchestrator />}
               {view === 'gateway' && <GatewaySentry />}
               {view === 'hunter' && <SovereignHunter />}

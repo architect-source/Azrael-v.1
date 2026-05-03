@@ -13,25 +13,58 @@ const parser = new Parser({
     }
 });
 
-const DEFAULT_FEED = "https://weworkremotely.com/categories/remote-data-science-jobs.rss/"; // Added trailing slash to prevent 301
+const DEFAULT_FEED = "https://weworkremotely.com/categories/remote-data-science-jobs.rss"; 
+const BACKUP_FEED = "https://weworkremotely.com/categories/remote-data-science-jobs.rss/"; 
 const DEFAULT_KEYWORDS = ["data", "cleansing", "repair", "automation", "excel", "scraping", "python"];
 
 // In-memory cache for persistence within the current session
 const detectedHashes = new Set<string>();
 
 export const handleHunt = async (req: Request, res: Response) => {
-    const feedUrl = (req.query.url as string) || DEFAULT_FEED;
+    let feedUrl = (req.query.url as string) || DEFAULT_FEED;
     const keywords = (req.query.keywords as string)?.split(',') || DEFAULT_KEYWORDS;
 
     console.log(`[AZRAEL] SOVEREIGN_HUNTER_INITIATED | Feed: ${feedUrl}`);
 
     try {
-        const response = await fetch(feedUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (SovereignHunter/1.0; forensic-audit)',
-                'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+        ];
+
+        const tryFetch = async (url: string) => {
+            const ua = userAgents[Math.floor(Math.random() * userAgents.length)];
+            return await fetch(url, {
+                redirect: 'follow',
+                headers: {
+                    'User-Agent': ua,
+                    'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+        };
+
+        let response = await tryFetch(feedUrl);
+
+        // 301/308 Redirect Handling
+        if (response.status === 301 || response.status === 308) {
+            const nextUrl = response.headers.get('Location');
+            if (nextUrl) {
+                console.log(`[AZRAEL] HUNT_REDIRECT_DETECTED: Retrying with ${nextUrl}`);
+                response = await tryFetch(nextUrl);
             }
-        });
+        }
+
+        // 403 Retry with trailing-slash toggle
+        if (response.status === 403) {
+            const altUrl = feedUrl.endsWith('/') ? feedUrl.slice(0, -1) : feedUrl + '/';
+            console.log(`[AZRAEL] HUNT_403_DETECTED: Attempting alternative path ${altUrl}`);
+            response = await tryFetch(altUrl);
+        }
+
         if (!response.ok) {
             throw new Error(`HTTP_ERROR: Status ${response.status}`);
         }

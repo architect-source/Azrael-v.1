@@ -27,17 +27,29 @@ let bot: Telegraf | null = null;
 // === AZRAEL SHADOW LEDGER AUTO-WRITE FUNCTION ===
 const appendToShadowLedger = async (newEntry: string, type: 'BREACH' | 'SCAM' | 'SYSTEM' = 'BREACH') => {
   const timestamp = new Date().toISOString();
+  const entry = {
+    timestamp,
+    type,
+    content: newEntry,
+  };
   
   try {
     const db = getSovereignDb();
-    await db.collection('shadow_ledger').add({
-      timestamp,
-      type,
-      content: newEntry,
-    });
+    await db.collection('shadow_ledger').add(entry);
     console.log("📜 WRITTEN TO FIRESTORE SHADOW_LEDGER");
-  } catch (e) {
+  } catch (e: any) {
     console.error("LEDGER_WRITE_FAILURE:", e);
+    if (e.message?.includes('PERMISSION_DENIED') || e.code === 7 || e.code === 5) {
+      try {
+        console.warn("[AZRAEL] LEDGER_WRITE_FALLBACK_INITIATED");
+        // @ts-ignore
+        const { getFirestore } = await import('firebase-admin/firestore');
+        await getFirestore().collection('shadow_ledger').add(entry);
+        console.log("📜 WRITTEN TO DEFAULT FIRESTORE (FALLBACK)");
+      } catch (e2) {
+        console.error("LEDGER_RECURSIVE_WRITE_FAILURE:", e2);
+      }
+    }
   }
 };
 
@@ -106,7 +118,30 @@ function setupBot(botInstance: Telegraf) {
       } else {
         await ctx.reply("AZRAEL: THE LEDGER IS EMPTY.");
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message?.includes('NOT_FOUND') || e.code === 5 || e.message?.includes('PERMISSION_DENIED') || e.code === 7) {
+        // FALLBACK FOR BOT
+        try {
+          // @ts-ignore
+          const { getFirestore } = await import('firebase-admin/firestore');
+          const snapshot = await getFirestore().collection('shadow_ledger')
+            .orderBy('timestamp', 'desc')
+            .limit(10)
+            .get();
+          const logs = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return `[${data.timestamp}] ${data.type} // ${data.content}`;
+          });
+          if (logs.length > 0) {
+            await ctx.reply(`📑 SHADOW LEDGER (DEFAULT_DB):\n\n${logs.join("\n")}`);
+          } else {
+            await ctx.reply("AZRAEL: THE LEDGER IS EMPTY (DEFAULT_DB).");
+          }
+          return;
+        } catch (e2) {
+          console.error("TELEGRAM_LOGS_FAILURE_RECURSIVE:", e2);
+        }
+      }
       console.error("TELEGRAM_LOGS_FAILURE:", e);
       await ctx.reply("AZRAEL: LEDGER_ACCESS_DENIED.");
     }
@@ -147,8 +182,18 @@ async function startServer() {
   // 2. Mount API Router FIRST to ensure priority over Vite/Static middleware
   app.get("/api/ping", (req, res) => res.json({ status: "pong", timestamp: new Date().toISOString() }));
   app.use("/api", router);
+  
+  // 3. Global Error Handler for API
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("AZRAEL // UNHANDLED_PROTOCOL_FAULT:", err);
+    res.status(err.status || 500).json({
+      error: "INTERNAL_PROTOCOL_FAILURE",
+      details: err.message || "An obsidian error occurred in the void loop.",
+      code: err.code || "VOID_ERROR"
+    });
+  });
 
-  // 3. Vite Middleware (Development)
+  // 4. Vite Middleware (Development)
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },

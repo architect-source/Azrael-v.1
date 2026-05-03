@@ -32,8 +32,8 @@ export async function handleChat(req: Request, res: Response) {
       try {
         await db.collection('shadow_ledger').add(entry);
       } catch (e: any) {
-        if (e.message?.includes('NOT_FOUND') || e.code === 5) {
-          console.warn("AZRAEL // NAMED_DATABASE_NOT_FOUND // FALLING_BACK_TO_DEFAULT");
+        if (e.message?.includes('NOT_FOUND') || e.code === 5 || e.message?.includes('PERMISSION_DENIED') || e.code === 7) {
+          console.warn(`AZRAEL // DATABASE_ACCESS_FAILURE [Code: ${e.code}] // FALLING_BACK_TO_DEFAULT`);
           const { getFirestore } = await import('firebase-admin/firestore');
           await getFirestore().collection('shadow_ledger').add(entry);
         } else {
